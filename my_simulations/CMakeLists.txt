@@ -7,9 +7,43 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+
+# Include Cpp "include" directory
+include_directories(include)
+
+install(DIRECTORY
+  launch
+  config
+  worlds
+  include
+  DESTINATION share/${PROJECT_NAME}/
+  )
+  
+# # Create Cpp executable
+# add_executable(cpp_executable src/cpp_1.cpp)
+# ament_target_dependencies(cpp_executable rclcpp)
+
+# # Install Cpp executables
+# install(TARGETS
+#   cpp_executable
+#   DESTINATION lib/${PROJECT_NAME}
+# )
+
+# Install Python modules
+ament_python_install_package(${PROJECT_NAME})
+ 
+install(PROGRAMS
+  scripts/bug0_node.py
+  scripts/bug1_node.py
+  scripts/bug2_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -23,11 +57,5 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-install(DIRECTORY
-  launch
-  config
-  worlds
-  DESTINATION share/${my_simulations}/
-  )
-
 ament_package()
+

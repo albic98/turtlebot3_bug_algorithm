@@ -17,11 +17,24 @@ def generate_launch_description():
         description='Full path to new world.'
     )
 
-    ign_gazebo_arg = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([os.path.join(get_package_share_directory('ros_ign_gazebo'), 'launch', 'ign_gazebo.launch.py')])
+    gazebo_arg = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(get_package_share_directory('gazebo_ros'), 'launch', 'gazebo.launch.py')]),
+        launch_arguments={'world':world}.items()
     )    
 
+    launch_turtlebot3 = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(get_package_share_directory('turtlebot3_bringup'), 'launch', 'turtlebot3_state_publisher.launch.py')]),
+        launch_arguments={'use_sim_time': 'true'}.items()
+    )
+
+    spawn_turtlebot3 = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(get_package_share_directory('turtlebot3_gazebo'), 'launch', 'spawn_turtlebot3.launch.py')]),
+    )
+
     return LaunchDescription([
-        # world_arg,
-        ign_gazebo_arg
+        world_arg,
+        launch_turtlebot3,
+        gazebo_arg,
+        spawn_turtlebot3,
     ])
+
