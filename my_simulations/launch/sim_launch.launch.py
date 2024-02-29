@@ -37,4 +37,3 @@ def generate_launch_description():
         gazebo_arg,
         spawn_turtlebot3,
     ])
-

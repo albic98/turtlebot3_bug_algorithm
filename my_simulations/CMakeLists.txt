@@ -39,9 +39,9 @@ install(DIRECTORY
 ament_python_install_package(${PROJECT_NAME})
  
 install(PROGRAMS
-  scripts/bug0_node.py
-  scripts/bug1_node.py
-  scripts/bug2_node.py
+  scripts/bugs.py
+  scripts/dist.py
+  scripts/location.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
