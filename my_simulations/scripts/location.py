@@ -11,7 +11,7 @@ class Location:
         self.x = None
         self.y = None
         self.t = None
-        self.deltaT = 0.05 # how close to angle to be to go
+        self.deltaT = 0.5 # how close to angle to be to go
 
     def update_location(self, x, y, t):
         self.m.acquire()
@@ -32,7 +32,7 @@ class Location:
         (x0, y0, _) = self.current_location()
         if x0 == None or y0 == None:
             # will be none on the first iteration
-            return sys.maxint
+            return sys.maxsize
         return math.sqrt((x-x0)**2 + (y-y0)**2)
 
     def facing_point(self, x, y):

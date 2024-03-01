@@ -1,6 +1,7 @@
 import threading
 import sys
 
+
 class Dist:
     def __init__(self):
         self.m = threading.Lock()
@@ -18,10 +19,12 @@ class Dist:
             if len(vsp) > 0:
                 return min(vsp)
             else:
-                return sys.maxint
+                return sys.maxsize
 
-        newfront = getmin(500, 581)
-        newleft = getmin(740, 851)
+        # newfront = getmin(500, 581)
+        # newleft = getmin(740, 851)
+        newfront = getmin(300, 281)
+        newleft = getmin(540, 651)
 
         self.m.acquire()
         self.left = newleft
@@ -48,7 +51,8 @@ class Dist:
             if len(vsp) > 0:
                 return min(vsp)
             else:
-                return sys.maxint
+                return sys.maxsize
+            
         self.m.acquire()
         i = self.angle_to_index(angle)
         start = i - 40
