@@ -9,13 +9,13 @@ class Dist:
         self.front = 0
         self.raw = []
 
-    def update(self, data):
+    def update(self, msg):
         # these magic numbers were acquired from Alan Beadle
         # straight ahead is 540, 40 index range should be enough
         # left chosen to look slightly back to get in front of wall before turning
         def getmin(a, b):
-            in_rng = lambda x: data.range_min <= x <= data.range_max
-            vsp = filter(in_rng, data.ranges[a:b])
+            in_rng = lambda x: msg.range_min <= x <= msg.range_max
+            vsp = filter(in_rng, msg.ranges[a:b])
             if len(vsp) > 0:
                 return min(vsp)
             else:
@@ -29,7 +29,7 @@ class Dist:
         self.m.acquire()
         self.left = newleft
         self.front = newfront
-        self.raw = data
+        self.raw = msg
         self.m.release()
 
     def get(self):

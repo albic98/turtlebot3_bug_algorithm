@@ -18,8 +18,8 @@ from dist import Dist
 current_location = Location()
 current_dists = Dist()
 
-delta = .01
-WALL_PADDING = .05
+delta = 0.001
+WALL_PADDING = 0.05
 
 STRAIGHT = 0
 LEFT = 1
@@ -30,12 +30,26 @@ MSG_STOP = 3
 class Bug(Node):
     def __init__(self, algorithm, tx, ty):
         super().__init__('bug')
-        self.odom_subscriber = self.create_subscription(Odometry, '/odom', location_callback, 10)
-        self.laser_subscriber = self.create_subscription(LaserScan, '/scan', sensor_callback, 10)
+        self.odom_subscriber = self.create_subscription(Odometry, '/odom', self.location_callback, 10)
+        self.laser_subscriber = self.create_subscription(LaserScan, '/scan', self.sensor_callback, 10)
         self.pub = self.create_publisher(Twist, '/cmd_vel', QoSProfile(depth=1))
         self.tx = tx
         self.ty = ty
         self.algorithm = algorithm
+
+    def location_callback(self, msg):
+        p = msg.pose.pose.position
+        q = (
+                msg.pose.pose.orientation.x,
+                msg.pose.pose.orientation.y,
+                msg.pose.pose.orientation.z,
+                msg.pose.pose.orientation.w
+            )
+        t = transform.euler_from_quaternion(q)[2] # in [-pi, pi]
+        current_location.update_location(p.x, p.y, t)
+
+    def sensor_callback(self, msg):
+        current_dists.update(msg)
 
     def go(self, direction):
         cmd = Twist()
@@ -75,9 +89,9 @@ class Bug(Node):
             (front, left) = current_dists.get()
             if front <= WALL_PADDING:
                 self.go(RIGHT)
-            elif WALL_PADDING - .1 <= left <= WALL_PADDING + .1:
+            elif WALL_PADDING - 0.05 <= left <= WALL_PADDING + 0.05:
                 self.go(STRAIGHT)
-            elif left > WALL_PADDING + .1:
+            elif left > WALL_PADDING + 0.05:
                 self.go(LEFT)
             else:
                 self.go(RIGHT)
@@ -99,6 +113,11 @@ class Bug(Node):
             if hit_wall:
                 self.follow_wall()
         print ("Arrived at", self.tx, self.ty)
+
+    def near(self, cx, cy, x, y):
+        nearx = x - .3 <= cx <= x + .3
+        neary = y - .3 <= cy <= y + .3
+        return nearx and neary
 
 
 class Bug0(Bug):
@@ -134,24 +153,23 @@ class Bug1(Bug):
             self.closest_point = (x, y)
 
         (ox, oy) = self.origin
-        if not self.left_origin_point and not near(x, y, ox, oy):
+        if not self.left_origin_point and not self.near(x, y, ox, oy):
             # we have now left the point where we hit the wall
             print ("Left original touch point")
             self.left_origin_point = True
-        elif near(x, y, ox, oy) and self.left_origin_point:
+        elif self.near(x, y, ox, oy) and self.left_origin_point:
             # circumnavigation achieved!
             print ("Circumnavigated obstacle")
             self.circumnavigated = True
 
         (cx, ct) = self.closest_point
-        if self.circumnavigated and near(x, y, cx, ct):
+        if self.circumnavigated and self.near(x, y, cx, ct):
             self.closest_point = (None, None)
             self.origin = (None, None)
             self.circumnavigated = False
             self.left_origin_point = False
             print ("Leaving wall")
             return True
-
         else:
             return False
 
@@ -182,49 +200,35 @@ class Bug2(Bug):
         cd = math.sqrt( (x-self.tx)**2 +  (y-self.ty)**2)
         dt = 0.01
 
-        if self.lh - dt <= t_angle <= self.lh + dt and not near(x, y, ox, oy):
+        if self.lh - dt <= t_angle <= self.lh + dt and not self.near(x, y, ox, oy):
             if cd < od:
                 print ("Leaving wall")
                 return True
         return False
 
-def location_callback(data):
-    p = data.pose.pose.position
-
-    q = (
-            data.pose.pose.orientation.x,
-            data.pose.pose.orientation.y,
-            data.pose.pose.orientation.z,
-            data.pose.pose.orientation.w
-        )
-    t = transform.euler_from_quaternion(q)[2] # in [-pi, pi]
-    current_location.update_location(p.x, p.y, t)
-
-def sensor_callback(data):
-    current_dists.update(data)
-
-def near(cx, cy, x, y):
-    nearx = x - .3 <= cx <= x + .3
-    neary = y - .3 <= cy <= y + .3
-    return nearx and neary
-    
 
 def main(args=None):
 
     rclpy.init(args=args)
-
-    algorithm = sys.argv[1]
     algorithms = ["bug0", "bug1", "bug2"]
+
+    if len(sys.argv) < 2:
+        print ("First argument should be one of ", algorithms, ".")
+        sys.exit(1)
+    
+    algorithm = sys.argv[1]
+
     if algorithm not in algorithms:
         print ("First argument should be one of ", algorithms, ". Was ", algorithm)
         sys.exit(1)
+
     if len(sys.argv) < 4:
         print ("Usage: rosrun bugs bug.py ALGORITHM X Y")
         sys.exit(1)
+
     (tx, ty) = map(float, sys.argv[2:4])
 
     print ("Setting target:",   tx, ty)
-
     if algorithm == "bug0":
         bug = Bug0(algorithm, tx, ty)
     elif algorithm == "bug1":
