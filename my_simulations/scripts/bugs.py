@@ -26,7 +26,6 @@ LEFT = 1
 RIGHT = 2
 MSG_STOP = 3
 
-
 class Bug(Node):
     def __init__(self, algorithm, tx, ty):
         super().__init__('bug')
