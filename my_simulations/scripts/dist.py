@@ -15,16 +15,17 @@ class Dist:
         # left chosen to look slightly back to get in front of wall before turning
         def getmin(a, b):
             in_rng = lambda x: msg.range_min <= x <= msg.range_max
-            vsp = filter(in_rng, msg.ranges[a:b])
+            vsp = list(filter(in_rng, msg.ranges[a:b]))
             if len(vsp) > 0:
                 return min(vsp)
             else:
                 return sys.maxsize
 
         # newfront = getmin(500, 581)
-        # newleft = getmin(740, 851)
-        newfront = getmin(300, 281)
-        newleft = getmin(540, 651)
+        # newleft = getmin(540, 851)
+
+        newfront = min(getmin(315, 360), getmin(0, 45))
+        newleft = getmin(0, 180)
 
         self.m.acquire()
         self.left = newleft
@@ -47,7 +48,7 @@ class Dist:
         # TODO(exm): copy and paste programming, refactor later
         def getmin(a, b):
             in_rng = lambda x: self.raw.range_min <= x <= self.raw.range_max
-            vsp = filter(in_rng, self.raw.ranges[a:b])
+            vsp = list(filter(in_rng, self.raw.ranges[a:b]))
             if len(vsp) > 0:
                 return min(vsp)
             else:
@@ -55,12 +56,13 @@ class Dist:
             
         self.m.acquire()
         i = self.angle_to_index(angle)
-        start = i - 40
+        start = i - 1 # 40
         if start < 0:
-            start = 0
-        end = i + 40
+            start = 0 
+        end = i + 1 # 40
         if end >= len(self.raw.ranges):
             end = len(self.raw.ranges) - 1
         ans = getmin(start, end)
         self.m.release()
+        print("\n", ans, "\n")
         return ans

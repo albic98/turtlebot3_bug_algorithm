@@ -2,6 +2,7 @@
 
 import math
 import sys
+from threading import Thread
 # import roslib; roslib.load_manifest('bugs')
 import rclpy
 from rclpy.node import Node
@@ -18,7 +19,7 @@ from dist import Dist
 current_location = Location()
 current_dists = Dist()
 
-delta = 0.001
+delta = 0.005
 WALL_PADDING = 0.05
 
 STRAIGHT = 0
@@ -35,6 +36,7 @@ class Bug(Node):
         self.tx = tx
         self.ty = ty
         self.algorithm = algorithm
+        self.bug_algorithm()
 
     def location_callback(self, msg):
         p = msg.pose.pose.position
@@ -46,9 +48,30 @@ class Bug(Node):
             )
         t = transform.euler_from_quaternion(q)[2] # in [-pi, pi]
         current_location.update_location(p.x, p.y, t)
+        print("Locations: ", current_location.x, ", ", current_location.y ,"\n")
 
     def sensor_callback(self, msg):
         current_dists.update(msg)
+        # print("msg_ranges: ", msg.ranges, "\n")
+        # print("Number of ranges: ", len(msg.ranges))
+        # print("Front ranges: ", msg.ranges[315:360], msg.ranges[0:45], ".\n")
+        # print("Left ranges: ", msg.ranges[0:180], "\n")
+        print("Front1, Left1: ", current_dists.get(), "\n")
+
+    def bug_algorithm(self):
+        print ("Calibrating sensors...")
+        # This actually just lets the sensor readings propagate into the system
+        time.sleep(1)
+        print ("Calibrated")
+        tx, ty = map(float, sys.argv[2:4])
+        while current_location.distance(tx, ty) > delta:
+            print("Tu sam 4. \n")
+            hit_wall = self.go_until_obstacle()
+            if hit_wall:
+                print("Tu sam 5 ", "\n")
+                self.follow_wall()
+                print("Front4, Left4: ", current_dists.get(), "\n")
+        print ("Arrived at", self.tx, self.ty)
 
     def go(self, direction):
         cmd = Twist()
@@ -60,32 +83,39 @@ class Bug(Node):
             cmd.angular.z = -0.3
         elif direction == MSG_STOP:
             pass
-        
         self.pub.publish(cmd)
+        print("Command published.\n")
 
     def go_until_obstacle(self):
-        print ("Going until destination or obstacle")
+        print ("Going until destination or obstacle \n")
         while current_location.distance(self.tx, self.ty) > delta:
             (frontdist, _) = current_dists.get()
             if frontdist <= WALL_PADDING:
+                print("Tu sam 0. \n")
                 return True
-
             if current_location.facing_point(self.tx, self.ty):
+                print("Tu sam 1. \n")
                 self.go(STRAIGHT)
             elif current_location.faster_left(self.tx, self.ty):
+                print("Tu sam 2. \n")
                 self.go(LEFT)
             else:
+                print("Tu sam 3. \n")
                 self.go(RIGHT)
-            time.sleep(.01)
+            time.sleep(0.05)
+        print("Go until obstacle executed.\n")
         return False
 
     def follow_wall(self):
-        print ("Following wall")
+        print ("Following wall \n")
         while current_dists.get()[0] <= WALL_PADDING:
+            print("Front2, Left2: ", current_dists.get(), "\n")
             self.go(RIGHT)
-            time.sleep(.01)
+            time.sleep(0.01)
+            # print("Loop 1")
         while not self.should_leave_wall():
             (front, left) = current_dists.get()
+            print("front,left u func: ", front, left, "\n")
             if front <= WALL_PADDING:
                 self.go(RIGHT)
             elif WALL_PADDING - 0.05 <= left <= WALL_PADDING + 0.05:
@@ -94,30 +124,18 @@ class Bug(Node):
                 self.go(LEFT)
             else:
                 self.go(RIGHT)
-            time.sleep(.01)
+            time.sleep(0.01)
+        print("Follow wall executed")
+
 
     def should_leave_wall(self):
         print ("You dolt! You need to subclass bug to know how to leave the wall")
         sys.exit(1)
     
-    def bug_algorithm(self):
-        # init_listener()
-        print ("Calibrating sensors...")
-        # This actually just lets the sensor readings propagate into the system
-        time.sleep(1)
-        print ("Calibrated")
-        tx, ty = map(float, sys.argv[2:4])
-        while current_location.distance(tx, ty) > delta:
-            hit_wall = self.go_until_obstacle()
-            if hit_wall:
-                self.follow_wall()
-        print ("Arrived at", self.tx, self.ty)
-
     def near(self, cx, cy, x, y):
         nearx = x - .3 <= cx <= x + .3
         neary = y - .3 <= cy <= y + .3
         return nearx and neary
-
 
 class Bug0(Bug):
     def should_leave_wall(self):
@@ -235,9 +253,15 @@ def main(args=None):
     elif algorithm == "bug2":
         bug = Bug2(algorithm, tx, ty)
 
-    bug.bug_algorithm()
-    rclpy.spin(bug)
-
+    try:
+        rclpy.spin(bug)
+    except KeyboardInterrupt:
+        pass
+    
+    bug.destroy_node()
+    rclpy.shutdown()
+   
 if __name__ == '__main__':
     main()
+
 

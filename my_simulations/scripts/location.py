@@ -8,25 +8,33 @@ import sys
 class Location:
     def __init__(self):
         self.m = threading.Lock() # global lock b/c easy and not a problem yet
-        self.x = None
-        self.y = None
-        self.t = None
+        self.x = 0
+        self.y = 0
+        self.t = 0
         self.deltaT = 0.5 # how close to angle to be to go
 
     def update_location(self, x, y, t):
-        self.m.acquire()
-        self.x = x
-        self.y = y
-        self.t = t
-        self.m.release()
+        with self.m:
+            self.x = x
+            self.y = y
+            self.t = t
+        # self.m.acquire()
+        # self.x = x
+        # self.y = y
+        # self.t = t
+        # self.m.release()
 
     def current_location(self):
-        self.m.acquire()
-        x = self.x
-        y = self.y
-        t = self.t
-        self.m.release()
-        return (x, y, t)
+        with self.m:
+            x = self.x
+            y = self.y
+            t = self.t
+        # self.m.acquire()
+        # x = self.x
+        # y = self.y
+        # t = self.t
+        # self.m.release()
+        return x, y, t
 
     def distance(self, x, y):
         (x0, y0, _) = self.current_location()
