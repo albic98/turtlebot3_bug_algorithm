@@ -16,16 +16,19 @@ from rclpy.qos import QoSProfile
 from location import Location, necessary_heading
 from dist import Dist
 
+
 current_location = Location()
 current_dists = Dist()
 
 delta = 0.005
-WALL_PADDING = 0.05
+WALL_PADDING = 0.3
 
 STRAIGHT = 0
-LEFT = 1
-RIGHT = 2
-MSG_STOP = 3
+MEDIUM_FINE_STRAIGHT = 1
+FINE_STRAIGHT = 2
+LEFT = 3
+RIGHT = 4
+MSG_STOP = 5
 
 class Bug(Node):
     def __init__(self, algorithm, tx, ty):
@@ -36,7 +39,6 @@ class Bug(Node):
         self.tx = tx
         self.ty = ty
         self.algorithm = algorithm
-        self.bug_algorithm()
 
     def location_callback(self, msg):
         p = msg.pose.pose.position
@@ -48,7 +50,8 @@ class Bug(Node):
             )
         t = transform.euler_from_quaternion(q)[2] # in [-pi, pi]
         current_location.update_location(p.x, p.y, t)
-        print("Locations: ", current_location.x, ", ", current_location.y ,"\n")
+        # print("Locations: ", p.x, ", ", p.y ,"\n")
+
 
     def sensor_callback(self, msg):
         current_dists.update(msg)
@@ -56,85 +59,97 @@ class Bug(Node):
         # print("Number of ranges: ", len(msg.ranges))
         # print("Front ranges: ", msg.ranges[315:360], msg.ranges[0:45], ".\n")
         # print("Left ranges: ", msg.ranges[0:180], "\n")
-        print("Front1, Left1: ", current_dists.get(), "\n")
+        # print("Front, Left: ", current_dists.get(), "\n")
+
 
     def bug_algorithm(self):
-        print ("Calibrating sensors...")
-        # This actually just lets the sensor readings propagate into the system
-        time.sleep(1)
-        print ("Calibrated")
+        # print ("Calibrating sensors...")
+        # # This actually just lets the sensor readings propagate into the system
+        # time.sleep(0.5)
+        # print ("Calibrated")
         tx, ty = map(float, sys.argv[2:4])
+        arrived = False
         while current_location.distance(tx, ty) > delta:
-            print("Tu sam 4. \n")
+            # print("Tu sam 1.")
             hit_wall = self.go_until_obstacle()
             if hit_wall:
-                print("Tu sam 5 ", "\n")
+                # print("Tu sam 2.")
                 self.follow_wall()
-                print("Front4, Left4: ", current_dists.get(), "\n")
-        print ("Arrived at", self.tx, self.ty)
+            if current_location.distance(tx, ty) <= delta:
+                self.go(MSG_STOP)  # Stop the robot
+                arrived = True
+                break
+            time.sleep(0.05)
+        if arrived:
+            print("\nArrived at: X=", self.tx, "and Y=", self.ty)
 
     def go(self, direction):
+        (x, y, t) = current_location.current_location()
         cmd = Twist()
         if direction == STRAIGHT:
-            cmd.linear.x = 0.4
+            cmd.linear.x = 0.3
         elif direction == LEFT:
-            cmd.angular.z = 0.3
+            cmd.angular.z = 0.4 # * math.tanh(1.2*(necessary_heading(x, y, self.tx, self.ty)- t))
         elif direction == RIGHT:
-            cmd.angular.z = -0.3
+            cmd.angular.z = -0.4 # * math.tanh(1.2*(necessary_heading(x, y, self.tx, self.ty)- t))
+        elif direction == MEDIUM_FINE_STRAIGHT:
+            cmd.linear.x = 0.12
+        elif direction == FINE_STRAIGHT:
+            cmd.linear.x = 0.04
         elif direction == MSG_STOP:
-            pass
+            cmd.linear.x = 0.0
+            cmd.angular.z = 0.0
         self.pub.publish(cmd)
-        print("Command published.\n")
 
     def go_until_obstacle(self):
         print ("Going until destination or obstacle \n")
         while current_location.distance(self.tx, self.ty) > delta:
-            (frontdist, _) = current_dists.get()
+            (frontdist, _, _) = current_dists.get()
             if frontdist <= WALL_PADDING:
-                print("Tu sam 0. \n")
+                # print("Tu sam 3. \n")
                 return True
+            if delta + 0.02 < current_location.distance(self.tx, self.ty) < delta + 0.05:
+                # print("Tu sam 4. \n")
+                self.go(FINE_STRAIGHT)
             if current_location.facing_point(self.tx, self.ty):
-                print("Tu sam 1. \n")
+                # print("Tu sam 5. \n")
                 self.go(STRAIGHT)
             elif current_location.faster_left(self.tx, self.ty):
-                print("Tu sam 2. \n")
+                # print("Tu sam 6.")
                 self.go(LEFT)
             else:
-                print("Tu sam 3. \n")
+                # print("Tu sam 7. \n")
                 self.go(RIGHT)
             time.sleep(0.05)
-        print("Go until obstacle executed.\n")
         return False
 
     def follow_wall(self):
+        (x, y, t) = current_location.current_location()
         print ("Following wall \n")
         while current_dists.get()[0] <= WALL_PADDING:
-            print("Front2, Left2: ", current_dists.get(), "\n")
+            # print("Tu sam 8.")
             self.go(RIGHT)
             time.sleep(0.01)
-            # print("Loop 1")
         while not self.should_leave_wall():
-            (front, left) = current_dists.get()
-            print("front,left u func: ", front, left, "\n")
+            (front, left, right) = current_dists.get()
+            # print("Tu sam 9.")
             if front <= WALL_PADDING:
-                self.go(RIGHT)
-            elif WALL_PADDING - 0.05 <= left <= WALL_PADDING + 0.05:
-                self.go(STRAIGHT)
-            elif left > WALL_PADDING + 0.05:
+                self.go(RIGHT)  
+            elif WALL_PADDING - 0.1 <= left <= WALL_PADDING + 0.1:
+                self.go(STRAIGHT)        
+            elif left > WALL_PADDING + 0.1:
                 self.go(LEFT)
             else:
                 self.go(RIGHT)
             time.sleep(0.01)
-        print("Follow wall executed")
-
 
     def should_leave_wall(self):
         print ("You dolt! You need to subclass bug to know how to leave the wall")
         sys.exit(1)
     
     def near(self, cx, cy, x, y):
-        nearx = x - .3 <= cx <= x + .3
-        neary = y - .3 <= cy <= y + .3
+        nearx = x - 0.05 <= cx <= x + 0.05
+        neary = y - 0.05 <= cy <= y + 0.05
         return nearx and neary
 
 class Bug0(Bug):
@@ -142,7 +157,7 @@ class Bug0(Bug):
         (x, y, t) = current_location.current_location()
         dir_to_go = current_location.global_to_local(necessary_heading(x, y, self.tx, self.ty))
         at = current_dists.at(dir_to_go)
-        if at > 10:
+        if at > 5:
             print ("Leaving wall")
             return True
         return False
@@ -156,7 +171,6 @@ class Bug1(Bug):
 
     def should_leave_wall(self):
         (x, y, t) = current_location.current_location()
-
         if None in self.closest_point:
             self.origin = (x, y)
             self.closest_point = (x, y)
@@ -199,7 +213,7 @@ class Bug2(Bug):
     def face_goal(self):
         while not current_location.facing_point(self.tx, self.ty):
             self.go(RIGHT)
-            time.sleep(.01)
+            time.sleep(0.01)
 
     def follow_wall(self):
         Bug.follow_wall(self)
@@ -253,14 +267,21 @@ def main(args=None):
     elif algorithm == "bug2":
         bug = Bug2(algorithm, tx, ty)
 
+    # Create a separate thread for spinning the ROS 2 node
+    thread = Thread(target=rclpy.spin, args=(bug,))
+    thread.start()
+
     try:
-        rclpy.spin(bug)
+        while rclpy.ok():
+            bug.bug_algorithm()
     except KeyboardInterrupt:
-        pass
-    
-    bug.destroy_node()
-    rclpy.shutdown()
-   
+        print("\nKeyboard interrupt detected. Exiting gracefully.\n")
+
+    finally:
+        thread.join()  # Wait for the ROS 2 node thread to finish
+        bug.destroy_node()
+        rclpy.shutdown()
+
 if __name__ == '__main__':
     main()
 

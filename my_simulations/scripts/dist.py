@@ -7,6 +7,7 @@ class Dist:
         self.m = threading.Lock()
         self.left = 0
         self.front = 0
+        self.right = 0
         self.raw = []
 
     def update(self, msg):
@@ -24,21 +25,24 @@ class Dist:
         # newfront = getmin(500, 581)
         # newleft = getmin(540, 851)
 
-        newfront = min(getmin(315, 360), getmin(0, 45))
-        newleft = getmin(0, 180)
+        newfront = min(getmin(330, 360), getmin(0, 30))
+        newleft = getmin(0, 110)
+        newright = getmin(250,360)
 
         self.m.acquire()
-        self.left = newleft
         self.front = newfront
+        self.left = newleft
+        self.right = newright
         self.raw = msg
         self.m.release()
 
     def get(self):
         self.m.acquire()
-        l = self.left
         f = self.front
+        l = self.left
+        r = self.right
         self.m.release()
-        return (f, l)
+        return (f, l, r)
 
     def angle_to_index(self, angle):
         return int((angle - self.raw.angle_min)/self.raw.angle_increment)
@@ -56,13 +60,12 @@ class Dist:
             
         self.m.acquire()
         i = self.angle_to_index(angle)
-        start = i - 1 # 40
+        start = i - 5
         if start < 0:
             start = 0 
-        end = i + 1 # 40
+        end = i + 5
         if end >= len(self.raw.ranges):
             end = len(self.raw.ranges) - 1
         ans = getmin(start, end)
         self.m.release()
-        print("\n", ans, "\n")
         return ans

@@ -11,7 +11,7 @@ class Location:
         self.x = 0
         self.y = 0
         self.t = 0
-        self.deltaT = 0.5 # how close to angle to be to go
+        self.deltaT = 0.2 # how close to angle to be to go
 
     def update_location(self, x, y, t):
         with self.m:
@@ -56,7 +56,7 @@ class Location:
         if None in (cx, cy, current_heading):
             return False
         return current_heading - necessary_heading(cx, cy, x, y) < 0
-
+    
     def global_to_local(self, desired_angle):
         (_, _, current_heading) = self.current_location()
         ans = desired_angle - current_heading

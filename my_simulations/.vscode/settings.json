@@ -1,0 +1,31 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/albert/turtle_bug_ws/build/turtlebot3_teleop",
+        "/home/albert/turtle_bug_ws/install/turtlebot3_teleop/lib/python3.10/site-packages",
+        "/home/albert/turtle_bug_ws/build/turtlebot3_example",
+        "/home/albert/turtle_bug_ws/install/turtlebot3_example/lib/python3.10/site-packages",
+        "/home/albert/turtle_bug_ws/install/turtlebot3_msgs/local/lib/python3.10/dist-packages",
+        "/home/albert/turtle_bug_ws/install/my_simulations/local/lib/python3.10/dist-packages",
+        "/home/albert/turtle_bug_ws/install/dynamixel_sdk_custom_interfaces/local/lib/python3.10/dist-packages",
+        "/home/albert/practice_ws/install/robot_practice_pkg/lib/python3.10/site-packages",
+        "/home/albert/practice_ws/install/robot_exercise_pkg/lib/python3.10/site-packages",
+        "/home/albert/practice_ws/install/my_mobile_robot/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/albert/turtle_bug_ws/build/turtlebot3_teleop",
+        "/home/albert/turtle_bug_ws/install/turtlebot3_teleop/lib/python3.10/site-packages",
+        "/home/albert/turtle_bug_ws/build/turtlebot3_example",
+        "/home/albert/turtle_bug_ws/install/turtlebot3_example/lib/python3.10/site-packages",
+        "/home/albert/turtle_bug_ws/install/turtlebot3_msgs/local/lib/python3.10/dist-packages",
+        "/home/albert/turtle_bug_ws/install/my_simulations/local/lib/python3.10/dist-packages",
+        "/home/albert/turtle_bug_ws/install/dynamixel_sdk_custom_interfaces/local/lib/python3.10/dist-packages",
+        "/home/albert/practice_ws/install/robot_practice_pkg/lib/python3.10/site-packages",
+        "/home/albert/practice_ws/install/robot_exercise_pkg/lib/python3.10/site-packages",
+        "/home/albert/practice_ws/install/my_mobile_robot/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "ros.distro": "humble"
+}
