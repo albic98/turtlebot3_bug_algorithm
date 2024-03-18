@@ -2,8 +2,8 @@
 
 import math
 import sys
+import random
 from threading import Thread
-# import roslib; roslib.load_manifest('bugs')
 import rclpy
 from rclpy.node import Node
 import time
@@ -25,10 +25,12 @@ WALL_PADDING = 0.3
 
 STRAIGHT = 0
 MEDIUM_FINE_STRAIGHT = 1
-FINE_STRAIGHT = 2
-LEFT = 3
-RIGHT = 4
-MSG_STOP = 5
+LEFT = 2
+RIGHT = 3
+FINE_LEFT = 4
+FINE_RIGHT = 5
+MSG_STOP = 6
+BACKWARDS = 7
 
 class Bug(Node):
     def __init__(self, algorithm, tx, ty):
@@ -39,7 +41,6 @@ class Bug(Node):
         self.tx = tx
         self.ty = ty
         self.algorithm = algorithm
-
     def location_callback(self, msg):
         p = msg.pose.pose.position
         q = (
@@ -55,92 +56,146 @@ class Bug(Node):
 
     def sensor_callback(self, msg):
         current_dists.update(msg)
-        # print("msg_ranges: ", msg.ranges, "\n")
-        # print("Number of ranges: ", len(msg.ranges))
-        # print("Front ranges: ", msg.ranges[315:360], msg.ranges[0:45], ".\n")
-        # print("Left ranges: ", msg.ranges[0:180], "\n")
-        # print("Front, Left: ", current_dists.get(), "\n")
-
 
     def bug_algorithm(self):
-        # print ("Calibrating sensors...")
-        # # This actually just lets the sensor readings propagate into the system
-        # time.sleep(0.5)
-        # print ("Calibrated")
         tx, ty = map(float, sys.argv[2:4])
         arrived = False
         while current_location.distance(tx, ty) > delta:
-            # print("Tu sam 1.")
             hit_wall = self.go_until_obstacle()
             if hit_wall:
-                # print("Tu sam 2.")
                 self.follow_wall()
-            if current_location.distance(tx, ty) <= delta:
+            elif current_location.distance(tx, ty) <= delta:
                 self.go(MSG_STOP)  # Stop the robot
                 arrived = True
                 break
+            else:
+                break
             time.sleep(0.05)
         if arrived:
-            print("\nArrived at: X=", self.tx, "and Y=", self.ty)
+            print("\nArrived at: X= ", self.tx, " and Y= ", self.ty, "\n")
+            time.sleep(1.0)
+            print("\nPlace the robot on a different location or shutdown program.")
 
     def go(self, direction):
         (x, y, t) = current_location.current_location()
+        n = necessary_heading(x,y, self.tx, self.ty)
         cmd = Twist()
         if direction == STRAIGHT:
-            cmd.linear.x = 0.3
-        elif direction == LEFT:
-            cmd.angular.z = 0.4 # * math.tanh(1.2*(necessary_heading(x, y, self.tx, self.ty)- t))
-        elif direction == RIGHT:
-            cmd.angular.z = -0.4 # * math.tanh(1.2*(necessary_heading(x, y, self.tx, self.ty)- t))
+            cmd.linear.x = 0.4 * math.tanh(1.2 * current_location.distance(self.tx, self.ty))
         elif direction == MEDIUM_FINE_STRAIGHT:
-            cmd.linear.x = 0.12
-        elif direction == FINE_STRAIGHT:
-            cmd.linear.x = 0.04
+            cmd.linear.x = 0.2
+        elif direction == BACKWARDS:
+            cmd.linear.x = -0.15
+        elif direction == LEFT:
+            cmd.angular.z = 0.6
+        elif direction == RIGHT:
+            cmd.angular.z = -0.6
+        elif direction == FINE_LEFT:
+            cmd.angular.z = 0.4 * abs(math.tanh(1.2 * (n - t)))
+        elif direction == FINE_RIGHT:
+            cmd.angular.z = -0.4 * abs(math.tanh(1.2 * (n -t)))
         elif direction == MSG_STOP:
             cmd.linear.x = 0.0
             cmd.angular.z = 0.0
         self.pub.publish(cmd)
 
+
     def go_until_obstacle(self):
-        print ("Going until destination or obstacle \n")
+        print ("\nGoing until destination or obstacle")
         while current_location.distance(self.tx, self.ty) > delta:
-            (frontdist, _, _) = current_dists.get()
+            (x, y, t) = current_location.current_location()
+            n = necessary_heading(x,y, self.tx, self.ty)
+            # print("Smjer: ", t, "Željeni smjer: ", n, "\n")
+            (frontdist, _, _, _, _) = current_dists.get()
             if frontdist <= WALL_PADDING:
-                # print("Tu sam 3. \n")
                 return True
-            if delta + 0.02 < current_location.distance(self.tx, self.ty) < delta + 0.05:
-                # print("Tu sam 4. \n")
-                self.go(FINE_STRAIGHT)
-            if current_location.facing_point(self.tx, self.ty):
-                # print("Tu sam 5. \n")
+            if math.pi - 0.02 <= n <= math.pi + 0.02 or -math.pi - 0.02 <= n <= -math.pi + 0.02:
+                self.go(FINE_LEFT)
+                time.sleep(0.5)
                 self.go(STRAIGHT)
+                time.sleep(1.0)
+                self.left_right_stuck = False
+            if current_location.facing_point(self.tx, self.ty):
+                # print("Tu sam 5.")
+                self.go(STRAIGHT)
+                self.left_right_stuck = False
             elif current_location.faster_left(self.tx, self.ty):
                 # print("Tu sam 6.")
-                self.go(LEFT)
+                self.go(FINE_LEFT)
+                self.left_right_stuck = False
             else:
-                # print("Tu sam 7. \n")
-                self.go(RIGHT)
-            time.sleep(0.05)
+                # print("Tu sam 7.")
+                self.go(FINE_RIGHT)
+                self.left_right_stuck = True
+            time.sleep(0.01)
         return False
 
+
     def follow_wall(self):
-        (x, y, t) = current_location.current_location()
-        print ("Following wall \n")
+        print("\nFollowing wall")
+        right_turn = False
+        left_turn = False
+        stuck_time_1 = 0.0
+        stuck_time_2 = 0.0
+        stuck_time_3 = 0.0
         while current_dists.get()[0] <= WALL_PADDING:
-            # print("Tu sam 8.")
-            self.go(RIGHT)
+            (front, left, right, backleft, backright) = current_dists.get()
+            if backleft < backright and left < right and stuck_time_1 <= 4:  
+                # print("Tu sam 7.1.")
+                self.go(RIGHT)
+                stuck_time_1 += 0.01
+                self.left_right_stuck = False
+            elif self.left_right_stuck == True:
+                # print("Tu sam 7.2.")
+                self.go(LEFT)
+                time.sleep(1.0)
+                self.left_right_stuck = False
+            elif left > right and stuck_time_1 <= 4:
+                # print("Tu sam 7.3.")
+                self.go(LEFT)
+                stuck_time_1 += 0.01
+                self.left_right_stuck = True
+            else:
+                # print("Tu sam 7.4.")
+                self.go(BACKWARDS)
+                time.sleep(0.2)
+                self.go(RIGHT)
+                time.sleep(0.2)
+                self.left_right_stuck = False
+                break
             time.sleep(0.01)
         while not self.should_leave_wall():
-            (front, left, right) = current_dists.get()
-            # print("Tu sam 9.")
+            (front, left, right, _, _) = current_dists.get()
             if front <= WALL_PADDING:
-                self.go(RIGHT)  
-            elif WALL_PADDING - 0.1 <= left <= WALL_PADDING + 0.1:
-                self.go(STRAIGHT)        
-            elif left > WALL_PADDING + 0.1:
+                if left < right and stuck_time_2 < 4:
+                    # print("Tu sam 8.1.")
+                    self.go(RIGHT)
+                    stuck_time_2 += 0.01
+                elif left > right and stuck_time_2 < 4:
+                    # print("Tu sam 8.2.")
+                    self.go(LEFT)
+                    stuck_time_2 += 0.01
+                else:
+                    break
+            elif WALL_PADDING - 0.2 <= left <= WALL_PADDING or WALL_PADDING - 0.2 <= right <= WALL_PADDING:
+                if WALL_PADDING - 0.2 <= left <= WALL_PADDING:
+                    self.go(MEDIUM_FINE_STRAIGHT)
+                    right_turn = False
+                    left_turn = True
+                else:
+                    self.go(MEDIUM_FINE_STRAIGHT)
+                    right_turn = True
+                    left_turn = False
+            elif left > WALL_PADDING - 0.12 and not right_turn and stuck_time_3 <= 4:
+                # print("Tu sam 8.3.")
                 self.go(LEFT)
-            else:
+                stuck_time_3 += 0.01
+            elif right > WALL_PADDING - 0.12 and not left_turn and stuck_time_3 <= 4:
+                # print("Tu sam 8.4.")
                 self.go(RIGHT)
+                stuck_time_3 += 0.01
+            else:
+                break 
             time.sleep(0.01)
 
     def should_leave_wall(self):
@@ -148,8 +203,8 @@ class Bug(Node):
         sys.exit(1)
     
     def near(self, cx, cy, x, y):
-        nearx = x - 0.05 <= cx <= x + 0.05
-        neary = y - 0.05 <= cy <= y + 0.05
+        nearx = x - 0.05 <= cx <= x + 0.25
+        neary = y - 0.05 <= cy <= y + 0.25
         return nearx and neary
 
 class Bug0(Bug):
@@ -157,8 +212,8 @@ class Bug0(Bug):
         (x, y, t) = current_location.current_location()
         dir_to_go = current_location.global_to_local(necessary_heading(x, y, self.tx, self.ty))
         at = current_dists.at(dir_to_go)
-        if at > 5:
-            print ("Leaving wall")
+        if at > 10:
+            print ("\nLeaving wall")
             return True
         return False
 
@@ -178,19 +233,19 @@ class Bug1(Bug):
             self.left_origin_point = False
             return False
         d = current_location.distance(self.tx, self.ty)
-        if d < self.closest_distance:
-            print ("New closest point at", x, y)
+        if d <= self.closest_distance:
+            print ("\nNew closest point at", x, y)
             self.closest_distance = d
             self.closest_point = (x, y)
 
         (ox, oy) = self.origin
         if not self.left_origin_point and not self.near(x, y, ox, oy):
             # we have now left the point where we hit the wall
-            print ("Left original touch point")
+            print ("\nLeft original touch point")
             self.left_origin_point = True
         elif self.near(x, y, ox, oy) and self.left_origin_point:
             # circumnavigation achieved!
-            print ("Circumnavigated obstacle")
+            print ("\nCircumnavigated obstacle")
             self.circumnavigated = True
 
         (cx, ct) = self.closest_point
@@ -199,7 +254,7 @@ class Bug1(Bug):
             self.origin = (None, None)
             self.circumnavigated = False
             self.left_origin_point = False
-            print ("Leaving wall")
+            print ("\nLeaving wall")
             return True
         else:
             return False
@@ -212,6 +267,7 @@ class Bug2(Bug):
 
     def face_goal(self):
         while not current_location.facing_point(self.tx, self.ty):
+            (front, left, right, _, _) = current_dists.get()
             self.go(RIGHT)
             time.sleep(0.01)
 
@@ -228,12 +284,12 @@ class Bug2(Bug):
         t_angle = necessary_heading(x, y, self.tx, self.ty)
         (ox, oy) = self.encountered_wall_at
         od = math.sqrt((ox-self.tx)**2 + (oy-self.ty)**2)
-        cd = math.sqrt( (x-self.tx)**2 +  (y-self.ty)**2)
-        dt = 0.01
+        cd = math.sqrt((x-self.tx)**2 +  (y-self.ty)**2)
+        dt = 0.05
 
         if self.lh - dt <= t_angle <= self.lh + dt and not self.near(x, y, ox, oy):
             if cd < od:
-                print ("Leaving wall")
+                print ("\nLeaving wall")
                 return True
         return False
 
@@ -254,7 +310,7 @@ def main(args=None):
         sys.exit(1)
 
     if len(sys.argv) < 4:
-        print ("Usage: rosrun bugs bug.py ALGORITHM X Y")
+        print ("Usage: ros2 run my_simulations bug.py ALGORITHM X Y")
         sys.exit(1)
 
     (tx, ty) = map(float, sys.argv[2:4])
@@ -268,6 +324,7 @@ def main(args=None):
         bug = Bug2(algorithm, tx, ty)
 
     # Create a separate thread for spinning the ROS 2 node
+    print ("\nStarting algorithm")
     thread = Thread(target=rclpy.spin, args=(bug,))
     thread.start()
 

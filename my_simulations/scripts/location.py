@@ -11,7 +11,7 @@ class Location:
         self.x = 0
         self.y = 0
         self.t = 0
-        self.deltaT = 0.2 # how close to angle to be to go
+        self.deltaT = 0.1 # how close to angle to be to go
 
     def update_location(self, x, y, t):
         with self.m:
@@ -43,13 +43,29 @@ class Location:
             return sys.maxsize
         return math.sqrt((x-x0)**2 + (y-y0)**2)
 
+
     def facing_point(self, x, y):
         (cx, cy, current_heading) = self.current_location()
         if None in (cx, cy, current_heading):
             return False
         n = necessary_heading(cx, cy, x, y)
-        # TODO(exm) possible bug with boundary conditions?
-        return n - self.deltaT <= current_heading <= n + self.deltaT
+
+        lower_bound = n - self.deltaT
+        upper_bound = n + self.deltaT
+
+        # Handling boundary conditions for angle comparison
+        if lower_bound < -math.pi and upper_bound > math.pi:
+            # Angle wraps around -π and π
+            return -math.pi <= current_heading <= math.pi
+        elif lower_bound < -math.pi:
+            # Only lower_bound wraps around -π
+            return (-math.pi <= current_heading <= upper_bound) or (lower_bound + 2*math.pi <= current_heading <= math.pi)
+        elif upper_bound > math.pi:
+            # Only upper_bound wraps around π
+            return (lower_bound <= current_heading <= math.pi) or (-math.pi <= current_heading <= upper_bound - 2*math.pi)
+        else:
+            # No wrapping around -π or π
+            return lower_bound <= current_heading <= upper_bound
 
     def faster_left(self, x, y):
         (cx, cy, current_heading) = self.current_location()
@@ -61,7 +77,7 @@ class Location:
         (_, _, current_heading) = self.current_location()
         ans = desired_angle - current_heading
         if ans < -math.pi:
-            ans += 2* math.pi
+            ans += 2 * math.pi
         return ans
 
 # current x, y; target x,y
