@@ -1,4 +1,3 @@
-<?xml version="1.0"?>
 <sdf version='1.7'>
   <world name='default'>
     <light name='sun' type='directional'>
@@ -941,10 +940,10 @@
       <pose>-0.880318 -0.584438 -1e-06 1e-06 -1e-06 -1.56716</pose>
     </model>
     <state world_name='default'>
-      <sim_time>163 351000000</sim_time>
-      <real_time>38 141726326</real_time>
-      <wall_time>1709123559 758159643</wall_time>
-      <iterations>37686</iterations>
+      <sim_time>429 923000000</sim_time>
+      <real_time>30 216746906</real_time>
+      <wall_time>1710405224 152024194</wall_time>
+      <iterations>29777</iterations>
       <model name='Arena'>
         <pose>0.018739 0.50158 0 0 -0 0</pose>
         <scale>1 1 1</scale>
@@ -974,80 +973,80 @@
         </link>
       </model>
       <model name='Kutija_CRTA'>
-        <pose>-0.441087 1.94126 -9e-06 -0.042483 -3e-06 -1.56716</pose>
+        <pose>-0.441087 1.94126 -1e-05 -0.042483 -3e-06 -1.56716</pose>
         <scale>1 1 1</scale>
         <link name='link_2'>
-          <pose>-0.441087 1.94126 -9e-06 -0.042483 -3e-06 -1.56716</pose>
+          <pose>-0.441087 1.94126 -1e-05 -0.042483 -3e-06 -1.56716</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 -9.8 0 -0 0</acceleration>
           <wrench>0 0 -294 0 -0 0</wrench>
         </link>
       </model>
       <model name='Kutija_CRTA_clone'>
-        <pose>-0.43941 1.32904 -9e-06 -0.042484 -1e-06 -1.56716</pose>
+        <pose>-0.43941 1.32904 -1e-05 -0.042484 -1e-06 -1.56716</pose>
         <scale>1 1 1</scale>
         <link name='link_2'>
-          <pose>-0.43941 1.32904 -9e-06 -0.042484 -1e-06 -1.56716</pose>
+          <pose>-0.43941 1.32904 -1e-05 -0.042484 -1e-06 -1.56716</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 -9.8 0 -0 0</acceleration>
           <wrench>0 0 -294 0 -0 0</wrench>
         </link>
       </model>
       <model name='Kutija_CRTA_clone_2'>
-        <pose>1.74051 1.26931 0 -0.042484 -1e-06 -1.56716</pose>
+        <pose>1.86745 1.13566 -1e-05 -0.042484 -1e-06 -1.56716</pose>
         <scale>1 1 1</scale>
         <link name='link_2'>
-          <pose>1.74051 1.26931 0 -0.042484 -1e-06 -1.56716</pose>
+          <pose>1.86745 1.13566 -1e-05 -0.042484 -1e-06 -1.56716</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 -9.8 0 -0 0</acceleration>
           <wrench>0 0 -294 0 -0 0</wrench>
         </link>
       </model>
       <model name='Kutija_CRTA_clone_3'>
-        <pose>1.74734 0.612901 0 -0.042484 -1e-06 -1.56716</pose>
+        <pose>1.86902 0.5044 -1e-05 -0.042484 -1e-06 -1.56716</pose>
         <scale>1 1 1</scale>
         <link name='link_2'>
-          <pose>1.74734 0.612901 0 -0.042484 -1e-06 -1.56716</pose>
+          <pose>1.86902 0.5044 -1e-05 -0.042484 -1e-06 -1.56716</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 -9.8 0 -0 0</acceleration>
           <wrench>0 0 -294 0 -0 0</wrench>
         </link>
       </model>
       <model name='Kutija_CRTA_clone_3_clone'>
-        <pose>0.924382 -1.11301 0 -0.042484 -1e-06 -1.56716</pose>
+        <pose>0.924382 -1.11301 -1e-05 -0.042484 -1e-06 -1.56716</pose>
         <scale>1 1 1</scale>
         <link name='link_2'>
-          <pose>0.924382 -1.11301 0 -0.042484 -1e-06 -1.56716</pose>
+          <pose>0.924382 -1.11301 -1e-05 -0.042484 -1e-06 -1.56716</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
+          <acceleration>0 0 -9.8 0 -0 0</acceleration>
+          <wrench>0 0 -294 0 -0 0</wrench>
         </link>
       </model>
       <model name='Kutija_CRTA_clone_3_clone_0'>
-        <pose>0.924205 -0.502744 0 -0.042484 -1e-06 -1.56716</pose>
+        <pose>0.924205 -0.502744 -1e-05 -0.042484 -1e-06 -1.56716</pose>
         <scale>1 1 1</scale>
         <link name='link_2'>
-          <pose>0.924205 -0.502744 0 -0.042484 -1e-06 -1.56716</pose>
+          <pose>0.924205 -0.502744 -1e-05 -0.042484 -1e-06 -1.56716</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
+          <acceleration>0 0 -9.8 0 -0 0</acceleration>
+          <wrench>0 0 -294 0 -0 0</wrench>
         </link>
       </model>
       <model name='Kutija_CRTA_clone_4'>
-        <pose>-1.64235 0.688799 -9e-06 -0.042484 -1e-06 -1.56716</pose>
+        <pose>-1.69053 0.818808 -1e-05 -0.042484 -1e-06 -1.56716</pose>
         <scale>1 1 1</scale>
         <link name='link_2'>
-          <pose>-1.64235 0.688799 -9e-06 -0.042484 -1e-06 -1.56716</pose>
+          <pose>-1.69053 0.818808 -1e-05 -0.042484 -1e-06 -1.56716</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 -9.8 0 -0 0</acceleration>
           <wrench>0 0 -294 0 -0 0</wrench>
         </link>
       </model>
       <model name='Kutija_CRTA_clone_5'>
-        <pose>-0.880318 -0.584438 -9e-06 -0.042484 -1e-06 -1.56716</pose>
+        <pose>-0.891738 -0.269172 -1e-05 -0.042484 -1e-06 -1.56716</pose>
         <scale>1 1 1</scale>
         <link name='link_2'>
-          <pose>-0.880318 -0.584438 -9e-06 -0.042484 -1e-06 -1.56716</pose>
+          <pose>-0.891738 -0.269172 -1e-05 -0.042484 -1e-06 -1.56716</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 -9.8 0 -0 0</acceleration>
           <wrench>0 0 -294 0 -0 0</wrench>
@@ -1069,7 +1068,7 @@
     </state>
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose>3.35072 -0.0421 14.1923 0 1.3298 -3.12393</pose>
+        <pose>0.163992 0.796428 13.0902 0 1.5698 3.12725</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>

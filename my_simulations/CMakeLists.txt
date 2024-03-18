@@ -22,18 +22,19 @@ install(DIRECTORY
   config
   worlds
   include
+  scripts
   DESTINATION share/${PROJECT_NAME}/
   )
   
-# # Create Cpp executable
-# add_executable(cpp_executable src/cpp_1.cpp)
-# ament_target_dependencies(cpp_executable rclcpp)
+# Create Cpp executable
+add_executable(cpp_executable src/cpp_1.cpp)
+ament_target_dependencies(cpp_executable rclcpp)
 
-# # Install Cpp executables
-# install(TARGETS
-#   cpp_executable
-#   DESTINATION lib/${PROJECT_NAME}
-# )
+# Install Cpp executables
+install(TARGETS
+  cpp_executable
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 # Install Python modules
 ament_python_install_package(${PROJECT_NAME})
@@ -42,6 +43,9 @@ install(PROGRAMS
   scripts/bugs.py
   scripts/dist.py
   scripts/location.py
+  scripts/bugs_initial.py
+  # scripts/bug2.py
+  # scripts/kalman_filter.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

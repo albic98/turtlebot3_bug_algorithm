@@ -48,7 +48,28 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
     "/home/albert/turtle_bug_ws/src/my_simulations/config"
     "/home/albert/turtle_bug_ws/src/my_simulations/worlds"
     "/home/albert/turtle_bug_ws/src/my_simulations/include"
+    "/home/albert/turtle_bug_ws/src/my_simulations/scripts"
     )
+endif()
+
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/my_simulations/cpp_executable" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/my_simulations/cpp_executable")
+    file(RPATH_CHECK
+         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/my_simulations/cpp_executable"
+         RPATH "")
+  endif()
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/my_simulations" TYPE EXECUTABLE FILES "/home/albert/turtle_bug_ws/src/my_simulations/build/cpp_executable")
+  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/my_simulations/cpp_executable" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/my_simulations/cpp_executable")
+    file(RPATH_CHANGE
+         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/my_simulations/cpp_executable"
+         OLD_RPATH "/opt/ros/humble/lib:"
+         NEW_RPATH "")
+    if(CMAKE_INSTALL_DO_STRIP)
+      execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/my_simulations/cpp_executable")
+    endif()
+  endif()
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
@@ -80,6 +101,7 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
     "/home/albert/turtle_bug_ws/src/my_simulations/scripts/bugs.py"
     "/home/albert/turtle_bug_ws/src/my_simulations/scripts/dist.py"
     "/home/albert/turtle_bug_ws/src/my_simulations/scripts/location.py"
+    "/home/albert/turtle_bug_ws/src/my_simulations/scripts/bugs_initial.py"
     )
 endif()
 
