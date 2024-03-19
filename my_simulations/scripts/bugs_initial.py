@@ -126,9 +126,9 @@ class Bug(Node):
             if front <= WALL_PADDING and stuck_time_2 < 4:
                 self.go(RIGHT)
                 stuck_time_2 += 0.01
-            elif WALL_PADDING - 0.15 <= left <= WALL_PADDING:
+            elif WALL_PADDING - 0.1 <= left <= WALL_PADDING + 0.1 :
                 self.go(MEDIUM_FINE_STRAIGHT)
-            elif left > WALL_PADDING- 0.05 and stuck_time_2 < 4:
+            elif left > WALL_PADDING + 0.1 and stuck_time_2 < 4:
                 self.go(LEFT)
                 stuck_time_2 += 0.01
             elif stuck_time_2 < 4:
@@ -210,7 +210,6 @@ class Bug2(Bug):
 
     def face_goal(self):
         while not current_location.facing_point(self.tx, self.ty):
-            # print("Tu sam 10.")
             self.go(RIGHT)
             time.sleep(0.01)
 

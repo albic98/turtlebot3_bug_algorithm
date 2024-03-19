@@ -41,11 +41,10 @@ ament_python_install_package(${PROJECT_NAME})
  
 install(PROGRAMS
   scripts/bugs.py
+  scripts/bug2.py
   scripts/dist.py
   scripts/location.py
   scripts/bugs_initial.py
-  # scripts/bug2.py
-  # scripts/kalman_filter.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

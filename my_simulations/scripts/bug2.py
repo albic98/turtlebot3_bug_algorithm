@@ -32,15 +32,16 @@ FINE_RIGHT = 5
 MSG_STOP = 6
 BACKWARDS = 7
 
-class Bug(Node):
-    def __init__(self, algorithm, tx, ty):
-        super().__init__('bug')
+class Bug2(Node):
+    def __init__(self, tx, ty):
+        super().__init__('bug2')
         self.odom_subscriber = self.create_subscription(Odometry, '/odom', self.location_callback, 10)
         self.laser_subscriber = self.create_subscription(LaserScan, '/scan', self.sensor_callback, 10)
         self.pub = self.create_publisher(Twist, '/cmd_vel', QoSProfile(depth=1))
         self.tx = tx
         self.ty = ty
-        self.algorithm = algorithm
+        self.lh = None
+        self.encountered_wall_at = (None, None)
     
     ## Function for determining the position of the robot using the "\odom" topic
     def location_callback(self, msg):
@@ -58,26 +59,6 @@ class Bug(Node):
     def sensor_callback(self, msg):
         current_dists.update(msg)
 
-    ## Main function which calls other functions necessary for successfully avoiding obstacles
-    def bug_algorithm(self):
-        tx, ty = map(float, sys.argv[2:4])
-        arrived = False
-        while current_location.distance(tx, ty) > delta:
-            hit_wall = self.go_until_obstacle()
-            if hit_wall:
-                self.follow_wall()
-            elif current_location.distance(tx, ty) <= delta:
-                self.go(MSG_STOP)  # Stop the robot
-                arrived = True
-                break
-            else:
-                break
-            time.sleep(0.05)
-        if arrived:
-            print("\nArrived at: X= ", self.tx, " and Y= ", self.ty, "\n")
-            time.sleep(1.0)
-            print("\nPlace the robot on a different location or shutdown program.")
-
     ## Function which publishes the velocity input on the "/cmd_vel" topic, depending on which one is required
     def go(self, direction):
         (x, y, t) = current_location.current_location()
@@ -90,9 +71,9 @@ class Bug(Node):
         elif direction == BACKWARDS:
             cmd.linear.x = -0.15
         elif direction == LEFT:
-            cmd.angular.z = 0.7
+            cmd.angular.z = 0.65
         elif direction == RIGHT:
-            cmd.angular.z = -0.7
+            cmd.angular.z = -0.65
         elif direction == FINE_LEFT:
             cmd.angular.z = 0.4 * abs(math.tanh(1.2 * (n - t)))
         elif direction == FINE_RIGHT:
@@ -125,9 +106,11 @@ class Bug(Node):
                 self.go(STRAIGHT)
                 self.left_right_stuck = False
             elif current_location.faster_left(self.tx, self.ty):
+                # print("Tu sam 1.")
                 self.go(FINE_LEFT)
                 self.left_right_stuck = False
             else:
+                # print("Tu sam 2.")
                 self.go(FINE_RIGHT)
                 self.left_right_stuck = True
             time.sleep(0.01)
@@ -148,17 +131,22 @@ class Bug(Node):
         while current_dists.get()[0] <= WALL_PADDING:
             (front, left, right, backleft, backright) = current_dists.get()
             if left < right or backleft < backright and stuck_time_1 <= 2: 
+                # print("Tu sam 1.1.")
                 self.go(RIGHT)
                 stuck_time_1 += 0.01
                 self.left_right_stuck = False
+                self.left_right_stuck = False
             elif self.left_right_stuck == True:
+                # print("Tu sam 1.2.")
                 self.go(LEFT)
                 time.sleep(0.5)
             elif left > right and backleft > backright and stuck_time_1 <= 2:
+                # print("Tu sam 1.3.")
                 self.go(LEFT)
                 stuck_time_1 += 0.01
                 self.left_right_stuck = True
             else:
+                # print("Tu sam 1.4.")
                 self.go(BACKWARDS)
                 time.sleep(0.3)
                 self.go(RIGHT)
@@ -173,98 +161,40 @@ class Bug(Node):
             (front, left, right, _, _) = current_dists.get()
             if front <= WALL_PADDING:
                 if left < right and stuck_time_2 < 2:
+                    # print("Tu sam 2.1.")
                     self.go(RIGHT)
                     stuck_time_2 += 0.01
+                    self.left_right_stuck = False
                 elif left > right and stuck_time_2 < 2:
+                    # print("Tu sam 2.2.")
                     self.go(LEFT)
                     stuck_time_2 += 0.01
+                    self.left_right_stuck = False
                 else:
                     break
-            elif WALL_PADDING - 0.26 <= left <= WALL_PADDING or WALL_PADDING - 0.26 <= right <= WALL_PADDING:
-                if WALL_PADDING - 0.26 <= left <= WALL_PADDING:
+            elif WALL_PADDING - 0.15 <= left <= WALL_PADDING or WALL_PADDING - 0.15 <= right <= WALL_PADDING:
+                if WALL_PADDING - 0.15 <= left <= WALL_PADDING:
+                    # print("Tu sam 2.3.")
                     self.go(MEDIUM_FINE_STRAIGHT)
                     self.right_turn = False
                     self.left_turn = True
                 else:
+                    # print("Tu sam 2.4.")
                     self.go(MEDIUM_FINE_STRAIGHT)
                     self.right_turn = True
                     self.left_turn = False
-            elif left > WALL_PADDING - 0.2 and not self.right_turn and stuck_time_3 <= 4:
+            elif left > WALL_PADDING - 0.05 and not self.right_turn and stuck_time_3 <= 4:
+                # print("Tu sam 2.5.")
                 self.go(LEFT)
                 stuck_time_3 += 0.01
-            elif right > WALL_PADDING - 0.2 and not self.left_turn and stuck_time_3 <= 4:
+            elif right > WALL_PADDING - 0.05 and not self.left_turn and stuck_time_3 <= 4:
+                # print("Tu sam 2.6.")
                 self.go(RIGHT)
                 stuck_time_3 += 0.01
             else:
+                self.left_right_stuck = False
                 break 
             time.sleep(0.01)
-
-    def should_leave_wall(self):
-        print ("You dolt! You need to subclass bug to know how to leave the wall")
-        sys.exit(1)
-
-class Bug0(Bug):
-    def should_leave_wall(self):
-        (x, y, t) = current_location.current_location()
-        dir_to_go = current_location.global_to_local(necessary_heading(x, y, self.tx, self.ty))
-        at = current_dists.at(dir_to_go)
-        if at > 10:
-            print ("\nLeaving wall")
-            return True
-        return False
-
-class Bug1(Bug):
-    def __init__(self, algorithm, tx, ty):
-        Bug.__init__(self, algorithm, tx, ty)
-        self.closest_point = (None, None)
-        self.origin = (None, None)
-        self.circumnavigated = False
-
-    def near(self, cx, cy, x, y):
-        nearx = x - 0.15 <= cx <= x + 0.15
-        neary = y - 0.15 <= cy <= y + 0.15
-        return nearx and neary
-
-    def should_leave_wall(self):
-        (x, y, t) = current_location.current_location()
-        if None in self.closest_point:
-            self.origin = (x, y)
-            self.closest_point = (x, y)
-            self.closest_distance = current_location.distance(self.tx, self.ty)
-            self.left_origin_point = False
-            return False
-        d = current_location.distance(self.tx, self.ty)
-        if d <= self.closest_distance:
-            print ("\nNew closest point at", x, y)
-            self.closest_distance = d
-            self.closest_point = (x, y)
-
-        (ox, oy) = self.origin
-        if not self.left_origin_point and not self.near(x, y, ox, oy):
-            # we have now left the point where we hit the wall
-            print ("\n\nLeft original touch point\n")
-            self.left_origin_point = True
-        elif self.near(x, y, ox, oy) and self.left_origin_point:
-            # circumnavigation achieved!
-            print ("\nCircumnavigated obstacle")
-            self.circumnavigated = True
-
-        (cx, cy) = self.closest_point
-        if self.circumnavigated and self.near(x, y, cx, cy):
-            self.closest_point = (None, None)
-            self.origin = (None, None)
-            self.circumnavigated = False
-            self.left_origin_point = False
-            print ("\nLeaving wall")
-            return True
-        else:
-            return False
-
-class Bug2(Bug):
-    def __init__(self, algorithm, tx, ty):
-        Bug.__init__(self, algorithm, tx, ty)
-        self.lh = None
-        self.encountered_wall_at = (None, None)
 
     def near(self, cx, cy, x, y):
         nearx = x - 0.1 <= cx <= x + 0.1
@@ -274,13 +204,12 @@ class Bug2(Bug):
     def face_goal(self):
         while not current_location.facing_point(self.tx, self.ty):
             if self.left_turn == True:
-                self.go(FINE_LEFT)
+                self.go(LEFT)
+            elif self.right_turn == True:
+                self.go(RIGHT)
             else:
-                self.go(FINE_RIGHT)
-
-    def follow_wall(self):
-        Bug.follow_wall(self)
-        self.face_goal()
+                break
+        time.sleep(0.01)    
 
     def should_leave_wall(self):
         (x, y, _) = current_location.current_location()
@@ -294,55 +223,59 @@ class Bug2(Bug):
         cd = math.sqrt((x-self.tx)**2 + (y-self.ty)**2)
         dt = 0.1
 
-        if self.lh - dt <= t_angle <= self.lh + dt and not self.near(x, y, ox, oy) and not self.left_right_stuck:
+        if self.lh - dt <= t_angle <= self.lh + dt and not self.near(x, y, ox, oy):
             if cd < od:
                 print ("\nLeaving wall")
                 return True
         return False
+    
+    ## Main function which calls other functions necessary for successfully avoiding obstacles
+    def bug_algorithm(self):
+        tx, ty = map(float, sys.argv[1:3])
+        arrived = False
+        while current_location.distance(tx, ty) > delta:
+            hit_wall = self.go_until_obstacle()
+            if hit_wall:
+                self.follow_wall()
+            elif current_location.distance(tx, ty) <= delta:
+                self.go(MSG_STOP)  # Stop the robot
+                arrived = True
+                break
+            else:
+                break
+            time.sleep(0.05)
+        if arrived:
+            print("\nArrived at: X= ", self.tx, " and Y= ", self.ty, "\n")
+            time.sleep(1.0)
+            print("\nPlace the robot on a different location or shutdown program.")
 
 def main(args=None):
 
     rclpy.init(args=args)
-    algorithms = ["bug0", "bug1", "bug2"]
 
-    if len(sys.argv) < 2:
-        print ("First argument should be one of ", algorithms, ".")
-        sys.exit(1)
-    
-    algorithm = sys.argv[1]
-
-    if algorithm not in algorithms:
-        print ("First argument should be one of ", algorithms, ". Was ", algorithm)
+    if len(sys.argv) < 3:
+        print ("Usage: ros2 run my_simulations bug.py X Y")
         sys.exit(1)
 
-    if len(sys.argv) < 4:
-        print ("Usage: ros2 run my_simulations bug.py ALGORITHM X Y")
-        sys.exit(1)
+    (tx, ty) = map(float, sys.argv[1:3])
+    print ("\nSetting target:",   tx, ty)
 
-    (tx, ty) = map(float, sys.argv[2:4])
-
-    print ("Setting target:",   tx, ty)
-    if algorithm == "bug0":
-        bug = Bug0(algorithm, tx, ty)
-    elif algorithm == "bug1":
-        bug = Bug1(algorithm, tx, ty)
-    elif algorithm == "bug2":
-        bug = Bug2(algorithm, tx, ty)
+    bug2_node = Bug2(tx, ty)
 
     # Create a separate thread for spinning the ROS 2 node
     print ("\nStarting algorithm")
-    thread = Thread(target=rclpy.spin, args=(bug,))
+    thread = Thread(target=rclpy.spin, args=(bug2_node,))
     thread.start()
 
     try:
         while rclpy.ok():
-            bug.bug_algorithm()
+            bug2_node.bug_algorithm()
     except KeyboardInterrupt:
         print("\nKeyboard interrupt detected. Exiting gracefully.\n")
 
     finally:
         thread.join()  # Wait for the ROS 2 node thread to finish
-        bug.destroy_node()
+        bug2_node.destroy_node()
         rclpy.shutdown()
 
 if __name__ == '__main__':

@@ -11,31 +11,24 @@ class Location:
         self.x = 0
         self.y = 0
         self.t = 0
-        self.deltaT = 0.1 # how close to angle to be to go
+        self.deltaT = 0.1 # how close to necessary angle to be to start moving towards goal
 
+    ## Function which constantly updates the location of the robot
     def update_location(self, x, y, t):
         with self.m:
             self.x = x
             self.y = y
             self.t = t
-        # self.m.acquire()
-        # self.x = x
-        # self.y = y
-        # self.t = t
-        # self.m.release()
 
+    ## Function which writes the current location of the robot
     def current_location(self):
         with self.m:
             x = self.x
             y = self.y
             t = self.t
-        # self.m.acquire()
-        # x = self.x
-        # y = self.y
-        # t = self.t
-        # self.m.release()
         return x, y, t
 
+    ## Function which calculates the distance of the robot from the goal
     def distance(self, x, y):
         (x0, y0, _) = self.current_location()
         if x0 == None or y0 == None:
@@ -43,7 +36,7 @@ class Location:
             return sys.maxsize
         return math.sqrt((x-x0)**2 + (y-y0)**2)
 
-
+    ## Function which determines if the robot is facing the goal
     def facing_point(self, x, y):
         (cx, cy, current_heading) = self.current_location()
         if None in (cx, cy, current_heading):
@@ -67,12 +60,15 @@ class Location:
             # No wrapping around -π or π
             return lower_bound <= current_heading <= upper_bound
 
+    ## Calculates the difference between current and necessary heading
+    ## and if it is True it says the robot to turn left (in bugs.py script)
     def faster_left(self, x, y):
         (cx, cy, current_heading) = self.current_location()
         if None in (cx, cy, current_heading):
             return False
         return current_heading - necessary_heading(cx, cy, x, y) < 0
     
+    ## Resolves the problem of boundary conditions around heading of -pi 
     def global_to_local(self, desired_angle):
         (_, _, current_heading) = self.current_location()
         ans = desired_angle - current_heading
@@ -80,6 +76,6 @@ class Location:
             ans += 2 * math.pi
         return ans
 
-# current x, y; target x,y
+# current cx, cy; target tx, ty
 def necessary_heading(cx, cy, tx, ty):
     return math.atan2(ty-cy, tx-cx)
