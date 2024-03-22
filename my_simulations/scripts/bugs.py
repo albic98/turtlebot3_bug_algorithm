@@ -21,7 +21,8 @@ current_location = Location()
 current_dists = Dist()
 
 delta = 0.005
-WALL_PADDING = 0.3
+
+DISTANCE = 0.3
 
 STRAIGHT = 0
 MEDIUM_FINE_STRAIGHT = 1
@@ -94,9 +95,9 @@ class Bug(Node):
         elif direction == RIGHT:
             cmd.angular.z = -0.7
         elif direction == FINE_LEFT:
-            cmd.angular.z = 0.4 * abs(math.tanh(1.2 * (n - t)))
+            cmd.angular.z = 0.45 * abs(math.tanh(1.8 * (n - t)))
         elif direction == FINE_RIGHT:
-            cmd.angular.z = -0.4 * abs(math.tanh(1.2 * (n -t)))
+            cmd.angular.z = -0.45 * abs(math.tanh(1.8 * (n - t)))
         elif direction == MSG_STOP:
             cmd.linear.x = 0.0
             cmd.angular.z = 0.0
@@ -105,33 +106,47 @@ class Bug(Node):
     ## Defines the robot behaviour when there are no obstacles around
     def go_until_obstacle(self):
         print ("\nGoing until destination or obstacle")
+        self.obstacle_time = 0.0
         while current_location.distance(self.tx, self.ty) > delta:
             (x, y, t) = current_location.current_location()
             n = necessary_heading(x,y, self.tx, self.ty)
             (frontdist, _, _, _, _) = current_dists.get()
-            if frontdist <= WALL_PADDING:
+            if frontdist <= DISTANCE:
                 return True
-            
             # This if condition checks if the robot's heading 'n' is close to the boundary conditions of -pi and pi.
             # This check is essential to prevent erratic behavior when the robot's position approaches these boundary values.
             # If the heading is within a small range around these boundary values, the robot performs corrective actions to ensure smooth navigation.
             if math.pi - 0.02 <= n <= math.pi + 0.02 or -math.pi - 0.02 <= n <= -math.pi + 0.02:
-                self.go(FINE_LEFT)
-                time.sleep(0.5)
-                self.go(STRAIGHT)
-                time.sleep(0.5)
-                self.left_right_stuck = False
+                if math.pi - 0.02 <= n <= math.pi + 0.02:
+                    self.go(STRAIGHT)
+                    time.sleep(0.3)
+                    self.go(FINE_LEFT)
+                    time.sleep(0.5)
+                if math.pi - 0.02 <= n <= math.pi + 0.02:
+                    self.go(STRAIGHT)
+                    time.sleep(0.3)
+                    self.go(FINE_RIGHT)
+                    time.sleep(0.5)
             if current_location.facing_point(self.tx, self.ty):
                 self.go(STRAIGHT)
-                self.left_right_stuck = False
             elif current_location.faster_left(self.tx, self.ty):
                 self.go(FINE_LEFT)
-                self.left_right_stuck = False
             else:
-                self.go(FINE_RIGHT)
-                self.left_right_stuck = True
+                if  n < 0 and (math.pi/3 < t < math.pi or -math.pi/2 - 0.05 < t < -math.pi/2 + 0.05):
+                    self.go(FINE_LEFT)
+                else:
+                    self.go(FINE_RIGHT)
             time.sleep(0.01)
         return False
+
+
+####################################################
+            ### Bug 0 STARTS HERE ###
+####################################################
+        
+class Bug0(Bug):
+    def __init__(self, algorithm, tx, ty):
+        Bug.__init__(self, algorithm, tx, ty)
 
     ## Defines the robot behaviour around walls and/or obstacles
     def follow_wall(self):
@@ -142,46 +157,60 @@ class Bug(Node):
         stuck_time_2 = 0.0
         stuck_time_3 = 0.0
 
-        # This loop executes when the value of WALL_PADDING is less than the default setting.
+        # This loop executes when the value of DISTANCE is less than the default setting.
         # It determines the direction for the robot to turn based on the relative position of the wall.
-        # The loop continues until the WALL_PADDING is restored to its default value.
-        while current_dists.get()[0] <= WALL_PADDING:
+        # The loop continues until the DISTANCE is restored to its default value.
+        while current_dists.get()[0] <= DISTANCE:
+            (x, y, t) = current_location.current_location()
             (front, left, right, backleft, backright) = current_dists.get()
-            if left < right or backleft < backright and stuck_time_1 <= 2: 
-                self.go(RIGHT)
-                stuck_time_1 += 0.01
-                self.left_right_stuck = False
-            elif self.left_right_stuck == True:
+            if (backleft < backright or left < right) and stuck_time_1 <= 2:
+                if backleft < backright:
+                    self.go(RIGHT)
+                    stuck_time_1 += 0.01
+                else:
+                    self.go(LEFT)
+                    stuck_time_1 += 0.01
+            elif (backleft > backright or left > right) and stuck_time_1 <= 2:
+                print("Tu sam 2.3.")
                 self.go(LEFT)
-                time.sleep(0.5)
-            elif left > right and backleft > backright and stuck_time_1 <= 2:
-                self.go(LEFT)
                 stuck_time_1 += 0.01
-                self.left_right_stuck = True
             else:
-                self.go(BACKWARDS)
-                time.sleep(0.3)
-                self.go(RIGHT)
-                time.sleep(0.2)
-                self.left_right_stuck = False
-                break
+                if self.ty <= 0:
+                    if  left < right and self.tx < x:
+                        self.go(RIGHT)
+                    else:
+                        if y*self.ty > 0:
+                            self.go(LEFT)
+                        else:
+                            self.go(RIGHT)
+                else:
+                    if  left < right and self.tx > x:
+                        self.go(RIGHT)
+                    else:
+                        if y*self.ty < 0 or self.tx*self.ty < 0:
+                            self.go(LEFT)
+                        else:
+                            self.go(RIGHT)
             time.sleep(0.01)
 
         # After the first while loop, and while the robot hasn't left the wall, 
         # this function defines the robot behaviour on how to avoid the obstacle
         while not self.should_leave_wall():
-            (front, left, right, _, _) = current_dists.get()
-            if front <= WALL_PADDING:
-                if left < right and stuck_time_2 < 2:
+            (front, left, right, backleft, backright) = current_dists.get()
+            if front <= DISTANCE:
+                if left < right or backleft < backright and stuck_time_2 <= 2:
                     self.go(RIGHT)
                     stuck_time_2 += 0.01
-                elif left > right and stuck_time_2 < 2:
+                    self.left_right_stuck = False
+                elif left > right or backleft > backright and stuck_time_2 <= 2:
                     self.go(LEFT)
                     stuck_time_2 += 0.01
                 else:
-                    break
-            elif WALL_PADDING - 0.26 <= left <= WALL_PADDING or WALL_PADDING - 0.26 <= right <= WALL_PADDING:
-                if WALL_PADDING - 0.26 <= left <= WALL_PADDING:
+                    self.go(MSG_STOP)
+                    pass
+                time.sleep(0.01)
+            elif DISTANCE - 0.2 <= left <= DISTANCE or DISTANCE - 0.2 <= right <= DISTANCE:
+                if DISTANCE - 0.2 <= left <= DISTANCE:
                     self.go(MEDIUM_FINE_STRAIGHT)
                     self.right_turn = False
                     self.left_turn = True
@@ -189,21 +218,16 @@ class Bug(Node):
                     self.go(MEDIUM_FINE_STRAIGHT)
                     self.right_turn = True
                     self.left_turn = False
-            elif left > WALL_PADDING - 0.2 and not self.right_turn and stuck_time_3 <= 4:
+            elif left > DISTANCE - 0.12 and not self.right_turn and stuck_time_3 <= 4:
                 self.go(LEFT)
                 stuck_time_3 += 0.01
-            elif right > WALL_PADDING - 0.2 and not self.left_turn and stuck_time_3 <= 4:
+            elif right > DISTANCE - 0.12 and not self.left_turn and stuck_time_3 <= 4:
                 self.go(RIGHT)
                 stuck_time_3 += 0.01
             else:
-                break 
+                break
             time.sleep(0.01)
 
-    def should_leave_wall(self):
-        print ("You dolt! You need to subclass bug to know how to leave the wall")
-        sys.exit(1)
-
-class Bug0(Bug):
     def should_leave_wall(self):
         (x, y, t) = current_location.current_location()
         dir_to_go = current_location.global_to_local(necessary_heading(x, y, self.tx, self.ty))
@@ -212,7 +236,12 @@ class Bug0(Bug):
             print ("\nLeaving wall")
             return True
         return False
+    
 
+####################################################
+            ### Bug 1 STARTS HERE ###
+####################################################
+    
 class Bug1(Bug):
     def __init__(self, algorithm, tx, ty):
         Bug.__init__(self, algorithm, tx, ty)
@@ -220,9 +249,91 @@ class Bug1(Bug):
         self.origin = (None, None)
         self.circumnavigated = False
 
+    ## Defines the robot behaviour around walls and/or obstacles
+    def follow_wall(self):
+        print("\nFollowing wall")
+        self.right_turn = False # this two flags define the direction of the previous turn
+        self.left_turn = False  # enabling the robot to perfrom the next action correctly
+        stuck_time_1 = 0.0
+        stuck_time_2 = 0.0
+        stuck_time_3 = 0.0
+
+        # This loop executes when the value of DISTANCE is less than the default setting.
+        # It determines the direction for the robot to turn based on the relative position of the wall.
+        # The loop continues until the DISTANCE is restored to its default value.
+        while current_dists.get()[0] <= DISTANCE:
+            (x, y, t) = current_location.current_location()
+            (front, left, right, backleft, backright) = current_dists.get()
+            if (backleft < backright or left < right) and stuck_time_1 <= 2.5:
+                if backleft < backright:
+                    self.go(RIGHT)
+                    stuck_time_1 += 0.01
+                else:
+                    self.go(LEFT)
+                    stuck_time_1 += 0.01
+            elif (backleft > backright and left > right) and stuck_time_1 <= 2.5:
+                self.go(LEFT)
+                stuck_time_1 += 0.01
+            else:
+                if self.ty <= 0:
+                    if  left < right and self.tx < x:
+                        self.go(RIGHT)
+                        time.sleep(0.2)
+                    else:
+                        if y*self.ty > 0:
+                            self.go(LEFT)
+                        else:
+                            self.go(RIGHT)
+                else:
+                    if  left < right and self.tx > x:
+                        self.go(RIGHT)
+                    else:
+                        if y*self.ty > 0:
+                            self.go(LEFT)
+                        else:
+                            self.go(RIGHT)
+            time.sleep(0.01)
+
+        # After the first while loop, and while the robot hasn't left the wall, 
+        # this function defines the robot behaviour on how to avoid the obstacle
+        while not self.should_leave_wall():
+            (front, left, right, backleft, backright) = current_dists.get()
+            if front <= DISTANCE:
+                if left < right or backleft < backright and stuck_time_2 <= 2:
+                    self.go(RIGHT)
+                    stuck_time_2 += 0.01
+                    self.left_right_stuck = False
+                elif left > right and backleft > backright and stuck_time_2 <= 2:
+                    self.go(LEFT)
+                    stuck_time_2 += 0.01
+                else:
+                    pass
+                time.sleep(0.01)
+            elif DISTANCE - 0.2 <= left <= DISTANCE or DISTANCE - 0.2 <= right <= DISTANCE:
+                if DISTANCE - 0.2 <= left <= DISTANCE:
+                    self.go(MEDIUM_FINE_STRAIGHT)
+                    self.right_turn = False
+                    self.left_turn = True
+                else:
+                    self.go(MEDIUM_FINE_STRAIGHT)
+                    self.right_turn = True
+                    self.left_turn = False
+            elif left > DISTANCE - 0.12 and not self.right_turn and stuck_time_3 <= 4:
+                self.go(LEFT)
+                stuck_time_3 += 0.01
+            elif right > DISTANCE - 0.12 and not self.left_turn and stuck_time_3 <= 4:
+                self.go(RIGHT)
+                stuck_time_3 += 0.01
+            else:
+                if self.right_turn:
+                    self.go(RIGHT)
+                else:
+                    self.go(LEFT)
+            time.sleep(0.01)
+
     def near(self, cx, cy, x, y):
-        nearx = x - 0.15 <= cx <= x + 0.15
-        neary = y - 0.15 <= cy <= y + 0.15
+        nearx = x - 0.11 <= cx <= x + 0.11
+        neary = y - 0.11 <= cy <= y + 0.11
         return nearx and neary
 
     def should_leave_wall(self):
@@ -260,11 +371,115 @@ class Bug1(Bug):
         else:
             return False
 
+
+
+####################################################
+            ### Bug 2 STARTS HERE ###
+####################################################
+
 class Bug2(Bug):
     def __init__(self, algorithm, tx, ty):
         Bug.__init__(self, algorithm, tx, ty)
         self.lh = None
         self.encountered_wall_at = (None, None)
+
+    ## Defines the robot behaviour around walls and/or obstacles
+    def follow_wall(self):
+        print("\nFollowing wall")
+        self.right_turn = False # this two flags define the direction of the previous turn
+        self.left_turn = False  # enabling the robot to perfrom the next action correctly
+        stuck_time_1 = 0.0
+        stuck_time_2 = 0.0
+        stuck_time_3 = 0.0
+        # This loop executes when the value of DISTANCE is less than the default setting.
+        # It determines the direction for the robot to turn based on the relative position of the wall.
+        # The loop continues until the DISTANCE is restored to its default value.
+        while current_dists.get()[0] <= DISTANCE:
+            self.obstacle_time += 0.01
+            (x, y, t) = current_location.current_location()
+            (front, left, right, backleft, backright) = current_dists.get()
+            if (backleft < backright or left < right) and stuck_time_1 <= 3:
+                if backleft < backright:
+                    # print("Tu sam 2.1.")
+                    self.go(RIGHT)
+                    stuck_time_1 += 0.01
+                else:
+                    # print("Tu sam 2.2.")
+                    self.go(LEFT)
+                    stuck_time_1 += 0.01
+            elif (backleft > backright and left > right) and stuck_time_1 <= 3:
+                # print("Tu sam 2.3.")
+                self.go(LEFT)
+                stuck_time_1 += 0.01
+            else:
+                if self.ty <= 0:
+                    if  left < right and self.tx < x:
+                        # print("Tu sam 2.4.")
+                        self.go(RIGHT)
+                    else:
+                        if y*self.ty > 0:
+                            # print("Tu sam 2.5.")
+                            self.go(LEFT)
+                        else:
+                            # print("Tu sam 2.6.")
+                            self.go(RIGHT)
+                else:
+                    if  left < right and self.tx > x:
+                        # print("Tu sam 2.7.")
+                        self.go(RIGHT)
+                    else:
+                        if y*self.ty > 0:
+                            # print("Tu sam 2.8.")
+                            self.go(LEFT)
+                        else:
+                            # print("Tu sam 2.9.")
+                            self.go(RIGHT)
+            time.sleep(0.01)
+
+        # After the first while loop, and while the robot hasn't left the wall, 
+        # this function defines the robot behaviour on how to avoid the obstacle
+        while not self.should_leave_wall():
+            self.obstacle_time += 0.01
+            (front, left, right, backleft, backright) = current_dists.get()
+            if front <= DISTANCE:
+                if left < right or backleft < backright and stuck_time_2 <= 2:
+                    # print("Tu sam 3.1.")
+                    self.go(RIGHT)
+                    stuck_time_2 += 0.01
+                elif left > right and backleft > backright and stuck_time_2 <= 2:
+                    # print("Tu sam 3.2.")
+                    self.go(LEFT)
+                    stuck_time_2 += 0.01
+                else:
+                    break
+                time.sleep(0.01)
+            elif DISTANCE - 0.2 <= left <= DISTANCE or DISTANCE - 0.2 <= right <= DISTANCE:
+                if DISTANCE - 0.2 <= left <= DISTANCE:
+                    self.go(MEDIUM_FINE_STRAIGHT)
+                    self.right_turn = False
+                    self.left_turn = True
+                else:
+                    self.go(MEDIUM_FINE_STRAIGHT)
+                    self.right_turn = True
+                    self.left_turn = False
+            elif left > DISTANCE - 0.12 and not self.right_turn:
+                # print("Tu sam 3.3.")
+                self.go(LEFT)
+            elif right > DISTANCE - 0.12 and not self.left_turn:
+                # print("Tu sam 3.4.")
+                self.go(RIGHT)
+            else:
+                if self.right_turn and stuck_time_3 <= 4:
+                    # print("Tu sam 3.5.")
+                    self.go(RIGHT)
+                    stuck_time_3 += 0.01
+                elif self.left_turn and stuck_time_3 <= 4:
+                     # print("Tu sam 3.6.")
+                     self.go(LEFT)
+                     stuck_time_3 += 0.01
+                else:
+                    break
+            time.sleep(0.01)
 
     def near(self, cx, cy, x, y):
         nearx = x - 0.1 <= cx <= x + 0.1
@@ -273,13 +488,11 @@ class Bug2(Bug):
     
     def face_goal(self):
         while not current_location.facing_point(self.tx, self.ty):
-            if self.left_turn == True:
-                self.go(FINE_LEFT)
-            else:
-                self.go(FINE_RIGHT)
+            self.obstacle_time += 0.01
+            self.go(RIGHT)
 
-    def follow_wall(self):
-        Bug.follow_wall(self)
+    def bug2_wall(self):
+        Bug2.follow_wall()
         self.face_goal()
 
     def should_leave_wall(self):
@@ -290,12 +503,12 @@ class Bug2(Bug):
             return False
         t_angle = necessary_heading(x, y, self.tx, self.ty)
         (ox, oy) = self.encountered_wall_at
-        od = math.sqrt((ox-self.tx)**2 + (oy-self.ty)**2)
-        cd = math.sqrt((x-self.tx)**2 + (y-self.ty)**2)
-        dt = 0.1
+        od = math.sqrt((ox-self.tx)**2 + (oy-self.ty)**2) # distance between obstacle hit point and target point
+        cd = math.sqrt((x-self.tx)**2 + (y-self.ty)**2)   # distance between current position and target point
+        dt = 0.12
 
-        if self.lh - dt <= t_angle <= self.lh + dt and not self.near(x, y, ox, oy) and not self.left_right_stuck:
-            if cd < od:
+        if self.lh - dt <= t_angle <= self.lh + dt and not self.near(x, y, ox, oy):
+            if cd < od and self.obstacle_time >= 3:
                 print ("\nLeaving wall")
                 return True
         return False
@@ -338,14 +551,11 @@ def main(args=None):
         while rclpy.ok():
             bug.bug_algorithm()
     except KeyboardInterrupt:
-        print("\nKeyboard interrupt detected. Exiting gracefully.\n")
-
+        print("\n\nKeyboard interrupt detected. Exiting gracefully.\n")
     finally:
-        thread.join()  # Wait for the ROS 2 node thread to finish
-        bug.destroy_node()
+        thread.join()
         rclpy.shutdown()
+        bug.destroy_node()
 
 if __name__ == '__main__':
     main()
-
-
