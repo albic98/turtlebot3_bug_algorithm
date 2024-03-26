@@ -313,11 +313,9 @@ class Bug1(Bug):
             # print("\nFRONT: ", front, "LEFT: ", left, " RIGHT: ", right)
             if front <= DISTANCE:
                 if left < right and backleft < backright and stuck_time_2 <= 3:
-                    # print("Tu sam 9.1.")
                     self.go(RIGHT)
                     stuck_time_2 += 0.01
                 elif left > right and backleft > backright and stuck_time_2 <= 3:
-                    # print("Tu sam 9.2.")
                     self.go(LEFT)
                     stuck_time_2 += 0.01
                 else:
@@ -326,21 +324,17 @@ class Bug1(Bug):
                 time.sleep(0.01)
             elif DISTANCE - 0.2 <= left <= DISTANCE or DISTANCE - 0.2 <= right <= DISTANCE:
                 if DISTANCE - 0.2 <= left <= DISTANCE:
-                    # print("Tu sam 9.3.")
                     self.go(MEDIUM_FINE_STRAIGHT)
                     self.right_turn = False
                     self.left_turn = True
                 else:
-                    # print("Tu sam 9.4.")
                     self.go(MEDIUM_FINE_STRAIGHT)
                     self.right_turn = True
                     self.left_turn = False
             elif left > DISTANCE - 0.12 and not self.right_turn and stuck_time_3 <= 5:
-                # print("Tu sam 9.6")
                 self.go(LEFT)
                 stuck_time_3 += 0.01
             elif right > DISTANCE - 0.12 and not self.left_turn and stuck_time_3 <= 5:
-                # print("Tu sam 9.7.")
                 self.go(RIGHT)
                 stuck_time_3 += 0.01
             else:
