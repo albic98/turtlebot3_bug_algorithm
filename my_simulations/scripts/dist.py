@@ -29,10 +29,10 @@ class Dist:
                 return sys.maxsize
 
         newfront = min(getmin(330, 360), getmin(0, 30)) # front angles are 0-30 and 330-360
-        newleft = getmin(15, 80)                        # left degrees are between  and degrees
-        newright = getmin(280, 345)                     # right degrees are between  and  degrees
-        new_backleft = getmin(90, 100)                  # backleft degrees are between  and  degrees
-        new_backright = getmin(260 ,270)                # backright degrees are between  and  degrees
+        newleft = getmin(15, 80)                        # left degrees are between 15 and 80 degrees
+        newright = getmin(280, 345)                     # right degrees are between 280 and 345 degrees
+        new_backleft = getmin(90, 100)                  # backleft degrees are between 90 and 100 degrees
+        new_backright = getmin(260 ,270)                # backright degrees are between 260 and 270 degrees
 
         # This part of the function just writes the minimum values in the variables which the robot uses
         self.m.acquire()
@@ -81,11 +81,11 @@ class Dist:
         self.m.acquire()
         i = self.angle_to_index(angle)
         # Define the start index for the range of sensor readings, ensuring it's not less than 0
-        start = i - 28
+        start = i - 20
         if start < 0:
             start = 0
         # Define the end index for the range of sensor readings, ensuring it's within the bounds of sensor readings
-        end = i + 28
+        end = i + 20
         if end >= len(self.raw.ranges):
             end = len(self.raw.ranges) - 1
         # Call the nested function to find the minimum value within the specified range

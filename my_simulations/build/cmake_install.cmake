@@ -99,7 +99,6 @@ endif()
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/my_simulations" TYPE PROGRAM FILES
     "/home/albert/turtle_bug_ws/src/my_simulations/scripts/bugs.py"
-    "/home/albert/turtle_bug_ws/src/my_simulations/scripts/bug2.py"
     "/home/albert/turtle_bug_ws/src/my_simulations/scripts/dist.py"
     "/home/albert/turtle_bug_ws/src/my_simulations/scripts/location.py"
     "/home/albert/turtle_bug_ws/src/my_simulations/scripts/bugs_initial.py"

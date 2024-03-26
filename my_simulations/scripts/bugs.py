@@ -42,6 +42,7 @@ class Bug(Node):
         self.tx = tx
         self.ty = ty
         self.algorithm = algorithm
+        self.obstacle_time = 0.0
     
     ## Function for determining the position of the robot using the "\odom" topic
     def location_callback(self, msg):
@@ -74,10 +75,18 @@ class Bug(Node):
             else:
                 break
             time.sleep(0.05)
+
         if arrived:
             print("\nArrived at: X= ", self.tx, " and Y= ", self.ty, "\n")
-            time.sleep(1.0)
             print("\nPlace the robot on a different location or shutdown program.")
+            ## Variables for Bug 1 set to initial state
+            self.lh = None
+            self.encountered_wall_at = (None, None)
+            ## Variables for Bug 2 set to initial state
+            self.closest_point = (None, None)
+            self.origin = (None, None)
+            self.circumnavigated = False
+            time.sleep(1.0)
 
     ## Function which publishes the velocity input on the "/cmd_vel" topic, depending on which one is required
     def go(self, direction):
@@ -106,7 +115,8 @@ class Bug(Node):
     ## Defines the robot behaviour when there are no obstacles around
     def go_until_obstacle(self):
         print ("\nGoing until destination or obstacle")
-        self.obstacle_time = 0.0
+        stuck_time_0 = 0.0
+
         while current_location.distance(self.tx, self.ty) > delta:
             (x, y, t) = current_location.current_location()
             n = necessary_heading(x,y, self.tx, self.ty)
@@ -116,26 +126,28 @@ class Bug(Node):
             # This if condition checks if the robot's heading 'n' is close to the boundary conditions of -pi and pi.
             # This check is essential to prevent erratic behavior when the robot's position approaches these boundary values.
             # If the heading is within a small range around these boundary values, the robot performs corrective actions to ensure smooth navigation.
-            if math.pi - 0.02 <= n <= math.pi + 0.02 or -math.pi - 0.02 <= n <= -math.pi + 0.02:
-                if math.pi - 0.02 <= n <= math.pi + 0.02:
+            if math.pi - 0.02 <= n <= math.pi or -math.pi <= n <= -math.pi + 0.02:
+                if -math.pi <= n <=  -math.pi + 0.02:
                     self.go(STRAIGHT)
                     time.sleep(0.3)
-                    self.go(FINE_LEFT)
-                    time.sleep(0.5)
-                if math.pi - 0.02 <= n <= math.pi + 0.02:
+                    # self.go(RIGHT)
+                    # time.sleep(0.4)
+                if math.pi - 0.02 <= n <= math.pi:
                     self.go(STRAIGHT)
                     time.sleep(0.3)
-                    self.go(FINE_RIGHT)
-                    time.sleep(0.5)
+                    self.go(RIGHT)
+                    time.sleep(0.2)
             if current_location.facing_point(self.tx, self.ty):
                 self.go(STRAIGHT)
             elif current_location.faster_left(self.tx, self.ty):
                 self.go(FINE_LEFT)
             else:
-                if  n < 0 and (math.pi/3 < t < math.pi or -math.pi/2 - 0.05 < t < -math.pi/2 + 0.05):
+                if  n < 0 and stuck_time_0 <= 6 and (math.pi/3 < t < math.pi or -math.pi/2 - 0.05 < t < -math.pi/2 + 0.05):
                     self.go(FINE_LEFT)
+                    stuck_time_0 += 0.01
                 else:
                     self.go(FINE_RIGHT)
+                    stuck_time_0 += 0.01
             time.sleep(0.01)
         return False
 
@@ -163,15 +175,14 @@ class Bug0(Bug):
         while current_dists.get()[0] <= DISTANCE:
             (x, y, t) = current_location.current_location()
             (front, left, right, backleft, backright) = current_dists.get()
-            if (backleft < backright or left < right) and stuck_time_1 <= 2:
+            if (backleft < backright or left < right) and stuck_time_1 <= 2.5:
                 if backleft < backright:
                     self.go(RIGHT)
                     stuck_time_1 += 0.01
                 else:
                     self.go(LEFT)
                     stuck_time_1 += 0.01
-            elif (backleft > backright or left > right) and stuck_time_1 <= 2:
-                print("Tu sam 2.3.")
+            elif (backleft > backright or left > right) and stuck_time_1 <= 2.5:
                 self.go(LEFT)
                 stuck_time_1 += 0.01
             else:
@@ -232,7 +243,8 @@ class Bug0(Bug):
         (x, y, t) = current_location.current_location()
         dir_to_go = current_location.global_to_local(necessary_heading(x, y, self.tx, self.ty))
         at = current_dists.at(dir_to_go)
-        if at > 10:
+        time.sleep(0.01)
+        if at > math.pi:
             print ("\nLeaving wall")
             return True
         return False
@@ -298,30 +310,37 @@ class Bug1(Bug):
         # this function defines the robot behaviour on how to avoid the obstacle
         while not self.should_leave_wall():
             (front, left, right, backleft, backright) = current_dists.get()
+            # print("\nFRONT: ", front, "LEFT: ", left, " RIGHT: ", right)
             if front <= DISTANCE:
-                if left < right or backleft < backright and stuck_time_2 <= 2:
+                if left < right and backleft < backright and stuck_time_2 <= 3:
+                    # print("Tu sam 9.1.")
                     self.go(RIGHT)
                     stuck_time_2 += 0.01
-                    self.left_right_stuck = False
-                elif left > right and backleft > backright and stuck_time_2 <= 2:
+                elif left > right and backleft > backright and stuck_time_2 <= 3:
+                    # print("Tu sam 9.2.")
                     self.go(LEFT)
                     stuck_time_2 += 0.01
                 else:
+                    stuck_time_2 = 0.0
                     pass
                 time.sleep(0.01)
             elif DISTANCE - 0.2 <= left <= DISTANCE or DISTANCE - 0.2 <= right <= DISTANCE:
                 if DISTANCE - 0.2 <= left <= DISTANCE:
+                    # print("Tu sam 9.3.")
                     self.go(MEDIUM_FINE_STRAIGHT)
                     self.right_turn = False
                     self.left_turn = True
                 else:
+                    # print("Tu sam 9.4.")
                     self.go(MEDIUM_FINE_STRAIGHT)
                     self.right_turn = True
                     self.left_turn = False
-            elif left > DISTANCE - 0.12 and not self.right_turn and stuck_time_3 <= 4:
+            elif left > DISTANCE - 0.12 and not self.right_turn and stuck_time_3 <= 5:
+                # print("Tu sam 9.6")
                 self.go(LEFT)
                 stuck_time_3 += 0.01
-            elif right > DISTANCE - 0.12 and not self.left_turn and stuck_time_3 <= 4:
+            elif right > DISTANCE - 0.12 and not self.left_turn and stuck_time_3 <= 5:
+                # print("Tu sam 9.7.")
                 self.go(RIGHT)
                 stuck_time_3 += 0.01
             else:
@@ -332,8 +351,8 @@ class Bug1(Bug):
             time.sleep(0.01)
 
     def near(self, cx, cy, x, y):
-        nearx = x - 0.11 <= cx <= x + 0.11
-        neary = y - 0.11 <= cy <= y + 0.11
+        nearx = x - 0.115 <= cx <= x + 0.115
+        neary = y - 0.115 <= cy <= y + 0.115
         return nearx and neary
 
     def should_leave_wall(self):
@@ -395,44 +414,34 @@ class Bug2(Bug):
         # It determines the direction for the robot to turn based on the relative position of the wall.
         # The loop continues until the DISTANCE is restored to its default value.
         while current_dists.get()[0] <= DISTANCE:
-            self.obstacle_time += 0.01
             (x, y, t) = current_location.current_location()
             (front, left, right, backleft, backright) = current_dists.get()
-            if (backleft < backright or left < right) and stuck_time_1 <= 3:
+            if (backleft < backright or left < right) and stuck_time_1 <= 2:
                 if backleft < backright:
-                    # print("Tu sam 2.1.")
                     self.go(RIGHT)
                     stuck_time_1 += 0.01
                 else:
-                    # print("Tu sam 2.2.")
                     self.go(LEFT)
                     stuck_time_1 += 0.01
-            elif (backleft > backright and left > right) and stuck_time_1 <= 3:
-                # print("Tu sam 2.3.")
+            elif (backleft > backright and left > right) and stuck_time_1 <= 2:
                 self.go(LEFT)
                 stuck_time_1 += 0.01
             else:
                 if self.ty <= 0:
                     if  left < right and self.tx < x:
-                        # print("Tu sam 2.4.")
                         self.go(RIGHT)
                     else:
                         if y*self.ty > 0:
-                            # print("Tu sam 2.5.")
                             self.go(LEFT)
                         else:
-                            # print("Tu sam 2.6.")
                             self.go(RIGHT)
                 else:
                     if  left < right and self.tx > x:
-                        # print("Tu sam 2.7.")
                         self.go(RIGHT)
                     else:
                         if y*self.ty > 0:
-                            # print("Tu sam 2.8.")
                             self.go(LEFT)
                         else:
-                            # print("Tu sam 2.9.")
                             self.go(RIGHT)
             time.sleep(0.01)
 
@@ -442,12 +451,10 @@ class Bug2(Bug):
             self.obstacle_time += 0.01
             (front, left, right, backleft, backright) = current_dists.get()
             if front <= DISTANCE:
-                if left < right or backleft < backright and stuck_time_2 <= 2:
-                    # print("Tu sam 3.1.")
+                if left < right or backleft < backright and stuck_time_2 <= 3:
                     self.go(RIGHT)
                     stuck_time_2 += 0.01
-                elif left > right and backleft > backright and stuck_time_2 <= 2:
-                    # print("Tu sam 3.2.")
+                elif left > right and backleft > backright and stuck_time_2 <= 3:
                     self.go(LEFT)
                     stuck_time_2 += 0.01
                 else:
@@ -463,18 +470,14 @@ class Bug2(Bug):
                     self.right_turn = True
                     self.left_turn = False
             elif left > DISTANCE - 0.12 and not self.right_turn:
-                # print("Tu sam 3.3.")
                 self.go(LEFT)
             elif right > DISTANCE - 0.12 and not self.left_turn:
-                # print("Tu sam 3.4.")
                 self.go(RIGHT)
             else:
                 if self.right_turn and stuck_time_3 <= 4:
-                    # print("Tu sam 3.5.")
                     self.go(RIGHT)
                     stuck_time_3 += 0.01
                 elif self.left_turn and stuck_time_3 <= 4:
-                     # print("Tu sam 3.6.")
                      self.go(LEFT)
                      stuck_time_3 += 0.01
                 else:
@@ -488,28 +491,30 @@ class Bug2(Bug):
     
     def face_goal(self):
         while not current_location.facing_point(self.tx, self.ty):
-            self.obstacle_time += 0.01
-            self.go(RIGHT)
-
-    def bug2_wall(self):
-        Bug2.follow_wall()
-        self.face_goal()
+            if self.right_turn:
+                self.go(FINE_LEFT)
+            else:
+                self.go(FINE_RIGHT)
+        self.obstacle_time = 0.0
 
     def should_leave_wall(self):
         (x, y, _) = current_location.current_location()
         if None in self.encountered_wall_at:
             self.encountered_wall_at = (x, y)
             self.lh = necessary_heading(x, y, self.tx, self.ty)
+            time.sleep(0.01)
+            print("\nNecessary heading for returning to m-line: ", self.lh)
             return False
         t_angle = necessary_heading(x, y, self.tx, self.ty)
         (ox, oy) = self.encountered_wall_at
         od = math.sqrt((ox-self.tx)**2 + (oy-self.ty)**2) # distance between obstacle hit point and target point
         cd = math.sqrt((x-self.tx)**2 + (y-self.ty)**2)   # distance between current position and target point
-        dt = 0.12
+        dt = 0.1
 
         if self.lh - dt <= t_angle <= self.lh + dt and not self.near(x, y, ox, oy):
-            if cd < od and self.obstacle_time >= 3:
+            if cd < od and self.obstacle_time >= 4:
                 print ("\nLeaving wall")
+                self.face_goal()
                 return True
         return False
 

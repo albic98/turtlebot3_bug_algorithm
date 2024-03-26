@@ -113,7 +113,7 @@
 			{
 				"command" : 9,
 				"file" : 0,
-				"line" : 63,
+				"line" : 62,
 				"parent" : 0
 			},
 			{
@@ -378,7 +378,6 @@
 			"paths" : 
 			[
 				"scripts/bugs.py",
-				"scripts/bug2.py",
 				"scripts/dist.py",
 				"scripts/location.py",
 				"scripts/bugs_initial.py"
